@@ -1,0 +1,1128 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+import '../cubit/profile_cubit.dart';
+import '../data/backend/backend_service.dart';
+import '../data/sync/sync_service.dart';
+import '../main.dart';
+import '../services/hive_service.dart';
+import '../services/notification_service.dart';
+import '../services/security_service.dart';
+import '../theme/app_theme.dart';
+import '../widgets/pin_setup_sheet.dart';
+
+class SettingsScreen extends StatefulWidget {
+  const SettingsScreen({super.key});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  StreamSubscription<dynamic>? _authSubscription;
+  SecuritySnapshot? _securitySnapshot;
+  bool _isLoadingSecurity = true;
+  bool _isLoadingBackend = true;
+  bool _isBusy = false;
+  bool _isSyncing = false;
+  String? _authEmail;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSecurityState();
+    _loadBackendState();
+    _authSubscription = BackendService.authStateChanges?.listen((_) {
+      _loadBackendState();
+    });
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadSecurityState() async {
+    final snapshot = await SecurityService.getSnapshot();
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _securitySnapshot = snapshot;
+      _isLoadingSecurity = false;
+    });
+  }
+
+  void _showSnackBar(String message, {Color? backgroundColor}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: GoogleFonts.nunito()),
+        backgroundColor: backgroundColor ?? AppTheme.primaryColor,
+      ),
+    );
+  }
+
+  Future<void> _loadBackendState() async {
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _authEmail = BackendService.currentUser?.email;
+      _isLoadingBackend = false;
+    });
+  }
+
+  Future<void> _syncNow({bool showSuccess = true}) async {
+    if (_isSyncing || !BackendService.isInitialized || _authEmail == null) {
+      return;
+    }
+
+    setState(() {
+      _isSyncing = true;
+    });
+
+    try {
+      await SyncService.syncNow();
+      await HiveService.syncDoseLogs();
+      await NotificationService.rescheduleAllNotifications();
+      if (mounted) {
+        await context.read<ProfileCubit>().hydrate();
+      }
+
+      if (mounted && showSuccess) {
+        _showSnackBar('Bulut senkron tamamlandi.');
+      }
+    } catch (error) {
+      if (mounted) {
+        _showSnackBar(
+          'Senkron tamamlanamadi: $error',
+          backgroundColor: AppTheme.errorColor,
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSyncing = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _showAuthDialog({required bool isSignUp}) async {
+    if (!BackendService.isInitialized) {
+      _showSnackBar(
+        'Supabase icin .env dosyasinda SUPABASE_URL ve SUPABASE_ANON_KEY gerekli.',
+        backgroundColor: AppTheme.warningColor,
+      );
+      return;
+    }
+
+    final emailController = TextEditingController();
+    final passwordController = TextEditingController();
+    var createAccount = isSignUp;
+    var isSubmitting = false;
+    String? errorText;
+
+    final didAuthenticate = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            Future<void> submit() async {
+              final email = emailController.text.trim();
+              final password = passwordController.text;
+
+              if (email.isEmpty || password.length < 6) {
+                setDialogState(() {
+                  errorText = 'E-posta ve en az 6 karakterli sifre girin.';
+                });
+                return;
+              }
+
+              setDialogState(() {
+                isSubmitting = true;
+                errorText = null;
+              });
+
+              try {
+                if (createAccount) {
+                  await BackendService.signUpWithPassword(
+                    email: email,
+                    password: password,
+                  );
+                } else {
+                  await BackendService.signInWithPassword(
+                    email: email,
+                    password: password,
+                  );
+                }
+
+                if (dialogContext.mounted) {
+                  Navigator.of(dialogContext).pop(true);
+                }
+              } catch (error) {
+                final friendlyMessage = BackendService.friendlyAuthError(error);
+                setDialogState(() {
+                  if (friendlyMessage.contains('Giris yap sekmesini') ||
+                      friendlyMessage.contains('zaten hesap')) {
+                    createAccount = false;
+                  }
+                  errorText = friendlyMessage;
+                  isSubmitting = false;
+                });
+              }
+            }
+
+            return AlertDialog(
+              title: Text(
+                createAccount ? 'Hesap Olustur' : 'Giris Yap',
+                style: GoogleFonts.nunito(fontWeight: FontWeight.w900),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
+                    decoration: const InputDecoration(
+                      labelText: 'E-posta',
+                      prefixIcon: Icon(Icons.mail_rounded),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: passwordController,
+                    obscureText: true,
+                    onSubmitted: (_) => submit(),
+                    decoration: const InputDecoration(
+                      labelText: 'Sifre',
+                      prefixIcon: Icon(Icons.lock_rounded),
+                    ),
+                  ),
+                  if (errorText != null) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      errorText!,
+                      style: GoogleFonts.nunito(
+                        color: AppTheme.errorColor,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: isSubmitting
+                        ? null
+                        : () {
+                            setDialogState(() {
+                              createAccount = !createAccount;
+                              errorText = null;
+                            });
+                          },
+                    child: Text(
+                      createAccount
+                          ? 'Zaten hesabim var'
+                          : 'Yeni hesap olustur',
+                      style: GoogleFonts.nunito(fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSubmitting
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(false),
+                  child: Text('Vazgec', style: GoogleFonts.nunito()),
+                ),
+                FilledButton(
+                  onPressed: isSubmitting ? null : submit,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                  ),
+                  child: isSubmitting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          createAccount ? 'Olustur' : 'Giris Yap',
+                          style: GoogleFonts.nunito(
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    emailController.dispose();
+    passwordController.dispose();
+
+    if (didAuthenticate == true && mounted) {
+      await _loadBackendState();
+      if (_authEmail == null) {
+        _showSnackBar(
+            'Hesap olusturuldu. E-posta onayi gerekiyorsa gelen kutunuzu kontrol edin.');
+        return;
+      }
+
+      await _syncNow(showSuccess: false);
+      _showSnackBar('Hesap baglandi ve senkron baslatildi.');
+    }
+  }
+
+  Future<void> _signOut() async {
+    if (_isBusy || !BackendService.isInitialized) {
+      return;
+    }
+
+    setState(() {
+      _isBusy = true;
+    });
+
+    await BackendService.signOut();
+    await _loadBackendState();
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _isBusy = false;
+    });
+
+    _showSnackBar('Bulut hesabindan cikis yapildi.');
+  }
+
+  Future<void> _changePin() async {
+    if (_isBusy) {
+      return;
+    }
+
+    final appState = IlacHatirlaticiApp.of(context);
+    final modalContext = appState?.modalContext ?? context;
+    final hadPin = _securitySnapshot?.hasPin == true;
+    final didSave = await showPinSetupSheet(
+      modalContext,
+      isChangingPin: hadPin,
+      title: hadPin ? 'PIN Değiştir' : 'PIN Oluştur',
+      subtitle: hadPin
+          ? 'Uygulama kilidiniz icin yeni bir PIN belirleyin.'
+          : 'Isterseniz uygulama acilisinda ve arka plandan dondugunde kullanilacak bir PIN olusturun.',
+    );
+
+    if (!mounted || !didSave) {
+      return;
+    }
+
+    await _loadSecurityState();
+    await appState?.refreshSecurityState();
+
+    if (!mounted) {
+      return;
+    }
+
+    _showSnackBar(hadPin ? 'PIN güncellendi.' : 'PIN oluşturuldu.');
+  }
+
+  Future<void> _removePin() async {
+    final snapshot = _securitySnapshot;
+    if (_isBusy || snapshot?.hasPin != true) {
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(
+            'PIN kapatilsin mi?',
+            style: GoogleFonts.nunito(fontWeight: FontWeight.w800),
+          ),
+          content: Text(
+            'PIN kaldirilirsa biyometri ve arka plandan donunce kilitle secenegi de kapanir.',
+            style: GoogleFonts.nunito(height: 1.5),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text('Vazgec', style: GoogleFonts.nunito()),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppTheme.errorColor,
+              ),
+              child: Text(
+                'PIN Kapat',
+                style: GoogleFonts.nunito(fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true || !mounted) {
+      return;
+    }
+
+    final appState = IlacHatirlaticiApp.of(context);
+
+    setState(() {
+      _isBusy = true;
+    });
+
+    await SecurityService.removePin();
+    await _loadSecurityState();
+    await appState?.refreshSecurityState();
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _isBusy = false;
+    });
+
+    _showSnackBar('PIN kapatildi. Uygulama acilista kilit istemeyecek.');
+  }
+
+  Future<void> _toggleBiometrics(bool enabled) async {
+    final appState = IlacHatirlaticiApp.of(context);
+    if (_isBusy) {
+      return;
+    }
+
+    final snapshot = _securitySnapshot;
+    if (snapshot == null) {
+      return;
+    }
+
+    if (!snapshot.hasPin) {
+      _showSnackBar(
+        'Once bir PIN olusturun.',
+        backgroundColor: AppTheme.warningColor,
+      );
+      return;
+    }
+
+    if (enabled && !snapshot.biometricsAvailable) {
+      _showSnackBar(
+        'Bu cihazda biyometrik dogrulama kullanilamiyor.',
+        backgroundColor: AppTheme.warningColor,
+      );
+      return;
+    }
+
+    setState(() {
+      _isBusy = true;
+    });
+
+    var canEnable = true;
+    if (enabled) {
+      canEnable = await SecurityService.authenticateWithBiometrics(
+        reason: 'Biyometrik kilidi etkinlestirmek icin dogrulama yapin',
+      );
+    }
+
+    if (canEnable) {
+      await SecurityService.setBiometricsEnabled(enabled);
+      await _loadSecurityState();
+      await appState?.refreshSecurityState();
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _isBusy = false;
+    });
+
+    if (!canEnable) {
+      _showSnackBar(
+        'Biyometrik dogrulama tamamlanamadi.',
+        backgroundColor: AppTheme.errorColor,
+      );
+    }
+  }
+
+  Future<void> _toggleLockOnResume(bool enabled) async {
+    if (_isBusy) {
+      return;
+    }
+
+    final snapshot = _securitySnapshot;
+    if (snapshot == null) {
+      return;
+    }
+
+    if (!snapshot.hasPin) {
+      _showSnackBar(
+        'Bu secenek icin once bir PIN olusturun.',
+        backgroundColor: AppTheme.warningColor,
+      );
+      return;
+    }
+
+    final appState = IlacHatirlaticiApp.of(context);
+
+    setState(() {
+      _isBusy = true;
+    });
+
+    await SecurityService.setLockOnResume(enabled);
+    await _loadSecurityState();
+    await appState?.refreshSecurityState();
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _isBusy = false;
+    });
+  }
+
+  Future<void> _lockNow() async {
+    final snapshot = _securitySnapshot;
+    if (snapshot?.hasPin != true) {
+      _showSnackBar(
+        'Uygulamayi kilitlemek icin once bir PIN olusturun.',
+        backgroundColor: AppTheme.warningColor,
+      );
+      return;
+    }
+
+    await IlacHatirlaticiApp.of(context)?.lockNow();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final snapshot = _securitySnapshot;
+    final appState = IlacHatirlaticiApp.of(context);
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    return Scaffold(
+      backgroundColor:
+          isDark ? AppTheme.darkBackground : AppTheme.backgroundColor,
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.only(bottom: 28),
+          children: [
+            _buildGradientHeader(snapshot, isDarkMode),
+            _buildSettingsSectionTitle('Güvenlik'),
+            if (_isLoadingSecurity)
+              _buildContentPadding(child: _buildLoadingCard(isDark))
+            else
+              _buildContentPadding(
+                child: _buildSectionCard(
+                  isDark: isDark,
+                  children: [
+                    _buildInfoTile(
+                      icon: Icons.enhanced_encryption_rounded,
+                      title: 'Yerel Sifreleme',
+                      subtitle:
+                          'İlaç kayıtları cihazdaki güvenli anahtarla şifreli tutulur.',
+                      isDark: isDark,
+                    ),
+                    _buildDivider(isDark),
+                    _buildActionTile(
+                      icon: Icons.pin_rounded,
+                      title: snapshot?.hasPin == true
+                          ? 'PIN Degistir'
+                          : 'PIN Oluştur',
+                      subtitle: snapshot?.hasPin == true
+                          ? 'Uygulama kilidiniz icin yeni bir PIN belirleyin.'
+                          : '4-6 haneli bir uygulama PINi olusturun.',
+                      isDark: isDark,
+                      enabled: !_isBusy,
+                      onTap: _changePin,
+                    ),
+                    if (snapshot?.hasPin == true) ...[
+                      _buildDivider(isDark),
+                      _buildActionTile(
+                        icon: Icons.lock_open_rounded,
+                        title: 'PIN Kapat',
+                        subtitle:
+                            'PIN, biyometri ve geri donuste kilitle birlikte kapanir.',
+                        isDark: isDark,
+                        enabled: !_isBusy,
+                        onTap: _removePin,
+                      ),
+                    ],
+                    _buildDivider(isDark),
+                    _buildSwitchTile(
+                      icon: Icons.fingerprint_rounded,
+                      title: 'Biyometri ile Ac',
+                      subtitle: snapshot?.hasPin == true
+                          ? (snapshot?.biometricsAvailable == true
+                              ? 'Parmak izi veya yuz tanima ile hizli giris.'
+                              : 'Bu cihazda biyometri desteklenmiyor.')
+                          : 'Bu secenek icin once PIN olusturun.',
+                      isDark: isDark,
+                      value: snapshot?.hasPin == true &&
+                          snapshot?.biometricsEnabled == true,
+                      enabled: snapshot?.hasPin == true &&
+                          snapshot?.biometricsAvailable == true &&
+                          !_isBusy,
+                      onChanged: _toggleBiometrics,
+                    ),
+                    _buildDivider(isDark),
+                    _buildSwitchTile(
+                      icon: Icons.lock_clock_rounded,
+                      title: 'Geri Donuste Kilitle',
+                      subtitle: snapshot?.hasPin == true
+                          ? 'Uygulama tekrar acildiginda PIN veya biyometri istensin.'
+                          : 'Bu secenek icin once PIN olusturun.',
+                      isDark: isDark,
+                      value: snapshot?.hasPin == true &&
+                          snapshot?.lockOnResume == true,
+                      enabled: snapshot?.hasPin == true && !_isBusy,
+                      onChanged: _toggleLockOnResume,
+                    ),
+                    _buildDivider(isDark),
+                    _buildActionTile(
+                      icon: Icons.lock_rounded,
+                      title: 'Simdi Kilitle',
+                      subtitle: 'Uygulamayi hemen kilit ekranina al.',
+                      isDark: isDark,
+                      enabled: snapshot?.hasPin == true && !_isBusy,
+                      onTap: _lockNow,
+                    ),
+                  ],
+                ),
+              ),
+            _buildSettingsSectionTitle('Bulut Senkron'),
+            _buildContentPadding(
+              child: _buildBackendSection(isDark),
+            ),
+            _buildSettingsSectionTitle('Görünüm'),
+            _buildContentPadding(
+              child: _buildSectionCard(
+                isDark: isDark,
+                children: [
+                  _buildSwitchTile(
+                    icon: Icons.dark_mode_rounded,
+                    title: 'Karanlik Mod',
+                    subtitle: isDarkMode ? 'Acik' : 'Kapali',
+                    isDark: isDark,
+                    value: isDarkMode,
+                    enabled: true,
+                    onChanged: (value) {
+                      appState?.setThemeMode(
+                        value ? ThemeMode.dark : ThemeMode.light,
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+            _buildSettingsSectionTitle('Hakkında'),
+            _buildContentPadding(
+              child: _buildSectionCard(
+                isDark: isDark,
+                children: [
+                  _buildInfoTile(
+                    icon: Icons.medication_rounded,
+                    title: 'İlaç Hatırlatıcı',
+                    subtitle: 'Surum 1.0.0',
+                    isDark: isDark,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBackendSection(bool isDark) {
+    if (_isLoadingBackend) {
+      return _buildLoadingCard(isDark);
+    }
+
+    final configWarning = BackendService.configurationWarning;
+    if (!BackendService.isConfigured) {
+      return _buildSectionCard(
+        isDark: isDark,
+        children: [
+          _buildInfoTile(
+            icon: Icons.cloud_off_rounded,
+            title: 'Supabase Kapali',
+            subtitle: configWarning ??
+                '.env dosyasina SUPABASE_URL ve SUPABASE_ANON_KEY eklenince bulut senkron acilir.',
+            isDark: isDark,
+          ),
+        ],
+      );
+    }
+
+    final email = _authEmail;
+    if (email == null) {
+      return _buildSectionCard(
+        isDark: isDark,
+        children: [
+          _buildInfoTile(
+            icon: Icons.cloud_queue_rounded,
+            title: 'Hesap Bagli Degil',
+            subtitle:
+                'Ilaclarinizi ve doz gecmisinizi Supabase hesabinizla cihazlar arasinda esitleyin.',
+            isDark: isDark,
+          ),
+          _buildDivider(isDark),
+          _buildActionTile(
+            icon: Icons.login_rounded,
+            title: 'Giris Yap',
+            subtitle: 'Var olan hesabinizla bulut senkronu baslatin.',
+            isDark: isDark,
+            enabled: !_isBusy && !_isSyncing,
+            onTap: () => _showAuthDialog(isSignUp: false),
+          ),
+          _buildDivider(isDark),
+          _buildActionTile(
+            icon: Icons.person_add_alt_1_rounded,
+            title: 'Hesap Olustur',
+            subtitle: 'Yeni Supabase kullanici hesabi acin.',
+            isDark: isDark,
+            enabled: !_isBusy && !_isSyncing,
+            onTap: () => _showAuthDialog(isSignUp: true),
+          ),
+        ],
+      );
+    }
+
+    return _buildSectionCard(
+      isDark: isDark,
+      children: [
+        _buildInfoTile(
+          icon: Icons.cloud_done_rounded,
+          title: 'Bulut Hesabi Bagli',
+          subtitle: email,
+          isDark: isDark,
+        ),
+        _buildDivider(isDark),
+        _buildActionTile(
+          icon: Icons.sync_rounded,
+          title: _isSyncing ? 'Senkron Suruyor' : 'Simdi Senkronize Et',
+          subtitle:
+              'Supabase verilerini cihaza cekip yerel degisiklikleri buluta gonderir.',
+          isDark: isDark,
+          enabled: !_isBusy && !_isSyncing,
+          onTap: _syncNow,
+        ),
+        _buildDivider(isDark),
+        _buildActionTile(
+          icon: Icons.logout_rounded,
+          title: 'Cikis Yap',
+          subtitle: 'Yerel veriler cihazda kalir, bulut senkron durur.',
+          isDark: isDark,
+          enabled: !_isBusy && !_isSyncing,
+          onTap: _signOut,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGradientHeader(SecuritySnapshot? snapshot, bool isDarkMode) {
+    final isPinSet = snapshot?.hasPin == true;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Color(0xFF7C3AED),
+            Color(0xFFA78BFA),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.vertical(
+          bottom: Radius.circular(28),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Ayarlar',
+            style: GoogleFonts.nunito(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+            ),
+          ),
+          Text(
+            'Güvenlik, tema ve uygulama tercihleri',
+            style: GoogleFonts.nunito(
+              fontSize: 12,
+              color: Colors.white.withValues(alpha: 0.75),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: _buildHeaderStatusCard(
+                  label: 'Koruma',
+                  value: isPinSet ? 'PIN Aktif' : 'PIN Kapalı',
+                  icon: isPinSet ? Icons.lock_rounded : Icons.lock_open_rounded,
+                  isActive: isPinSet,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _buildHeaderStatusCard(
+                  label: 'Tema',
+                  value: isDarkMode ? 'Karanlık' : 'Açık',
+                  icon: isDarkMode
+                      ? Icons.dark_mode_rounded
+                      : Icons.light_mode_rounded,
+                  isActive: true,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeaderStatusCard({
+    required String label,
+    required String value,
+    required IconData icon,
+    required bool isActive,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.white, size: 16),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: GoogleFonts.nunito(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white.withValues(alpha: 0.7),
+                ),
+              ),
+              Text(
+                value,
+                style: GoogleFonts.nunito(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingsSectionTitle(String title) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 28, 20, 12),
+      child: Row(
+        children: [
+          Container(
+            width: 4,
+            height: 18,
+            decoration: BoxDecoration(
+              color: const Color(0xFF7C3AED),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            title,
+            style: GoogleFonts.nunito(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              color: isDark ? Colors.white : AppTheme.textPrimary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContentPadding({required Widget child}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: child,
+    );
+  }
+
+  Widget _buildLoadingCard(bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? AppTheme.darkBorder : AppTheme.borderColor,
+        ),
+      ),
+      child: Row(
+        children: [
+          const SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: AppTheme.primaryColor,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            'Guvenlik bilgileri yukleniyor...',
+            style: GoogleFonts.nunito(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: isDark ? Colors.white70 : AppTheme.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionCard({
+    required bool isDark,
+    required List<Widget> children,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? AppTheme.darkBorder : AppTheme.borderColor,
+        ),
+      ),
+      child: Column(children: children),
+    );
+  }
+
+  Widget _buildDivider(bool isDark) {
+    return Divider(
+      height: 1,
+      thickness: 1,
+      color: isDark ? AppTheme.darkBorder : AppTheme.borderColor,
+    );
+  }
+
+  Widget _buildInfoTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required bool isDark,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildLeadingIcon(icon),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.nunito(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: isDark ? Colors.white : AppTheme.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.nunito(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    height: 1.4,
+                    color: isDark
+                        ? const Color(0xFFC4B7E9)
+                        : AppTheme.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required bool isDark,
+    required bool enabled,
+    required Future<void> Function() onTap,
+  }) {
+    final foregroundColor = enabled
+        ? (isDark ? Colors.white : AppTheme.textPrimary)
+        : Colors.grey[500]!;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: enabled ? onTap : null,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildLeadingIcon(icon, enabled: enabled),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.nunito(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: foregroundColor,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: GoogleFonts.nunito(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        height: 1.4,
+                        color: enabled
+                            ? (isDark
+                                ? const Color(0xFFC4B7E9)
+                                : AppTheme.textSecondary)
+                            : Colors.grey[400],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: enabled ? AppTheme.primaryColor : Colors.grey[400],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSwitchTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required bool isDark,
+    required bool value,
+    required bool enabled,
+    required ValueChanged<bool> onChanged,
+  }) {
+    final foregroundColor = enabled
+        ? (isDark ? Colors.white : AppTheme.textPrimary)
+        : Colors.grey[500]!;
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildLeadingIcon(icon, enabled: enabled),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.nunito(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: foregroundColor,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.nunito(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    height: 1.4,
+                    color: enabled
+                        ? (isDark
+                            ? const Color(0xFFC4B7E9)
+                            : AppTheme.textSecondary)
+                        : Colors.grey[400],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch.adaptive(
+            value: value,
+            activeThumbColor: AppTheme.primaryColor,
+            onChanged: enabled ? onChanged : null,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLeadingIcon(IconData icon, {bool enabled = true}) {
+    final color = enabled ? AppTheme.primaryColor : Colors.grey[400]!;
+
+    return Container(
+      width: 38,
+      height: 38,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Icon(icon, color: color, size: 18),
+    );
+  }
+}
