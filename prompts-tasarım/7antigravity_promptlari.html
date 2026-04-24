@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Antigravity Promptları</title>
+<style>
+  :root {
+    --ag-primary: #7c3aed;
+    --ag-primary-soft: #ede9fe;
+    --ag-ink: #221b3f;
+    --ag-muted: #6b6780;
+    --ag-surface: #ffffff;
+    --ag-surface-soft: #f6f4ff;
+    --ag-border: #e9e2ff;
+    --ag-success-bg: #d1fae5;
+    --ag-success-text: #065f46;
+    --ag-warning-bg: #fef3c7;
+    --ag-warning-text: #92400e;
+    --ag-code-bg: #1e1e2e;
+    --ag-code-text: #cdd6f4;
+    --ag-dark-a: #1f1535;
+    --ag-dark-b: #2d1f4e;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: var(--font-sans, "Segoe UI", sans-serif);
+    color: var(--color-text-primary, var(--ag-ink));
+  }
+
+  .ag-wrap {
+    padding: 1rem 0;
+  }
+
+  .tab-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .tab {
+    flex: 1;
+    border: 2px solid transparent;
+    border-radius: 12px;
+    padding: 10px 12px;
+    background: var(--ag-primary-soft);
+    color: var(--ag-primary);
+    font-size: 13px;
+    font-weight: 700;
+    text-align: center;
+    cursor: pointer;
+    transition: 0.18s ease;
+  }
+
+  .tab.active {
+    background: var(--ag-primary);
+    color: #fff;
+    box-shadow: 0 10px 20px rgba(124, 58, 237, 0.2);
+  }
+
+  .panel {
+    display: none;
+  }
+
+  .panel.active {
+    display: block;
+  }
+
+  .section-label {
+    margin-bottom: 8px;
+    color: var(--ag-primary);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .info-card,
+  .preview-box {
+    margin-bottom: 12px;
+    border: 1px solid var(--ag-border);
+    border-radius: 14px;
+    background: var(--color-background-secondary, var(--ag-surface-soft));
+  }
+
+  .info-card {
+    padding: 12px;
+  }
+
+  .preview-box {
+    padding: 14px;
+  }
+
+  .success,
+  .warn {
+    margin-bottom: 10px;
+    border-left: 3px solid;
+    border-radius: 10px;
+    padding: 9px 12px;
+    font-size: 11px;
+    line-height: 1.55;
+  }
+
+  .success {
+    border-color: #10b981;
+    background: var(--ag-success-bg);
+    color: var(--ag-success-text);
+  }
+
+  .warn {
+    border-color: #f59e0b;
+    background: var(--ag-warning-bg);
+    color: var(--ag-warning-text);
+  }
+
+  .step {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .step:last-child {
+    margin-bottom: 0;
+  }
+
+  .step-num {
+    display: flex;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: var(--ag-primary);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 800;
+  }
+
+  .step-text {
+    font-size: 11px;
+    line-height: 1.55;
+    color: var(--color-text-primary, var(--ag-ink));
+  }
+
+  .prompt-shell {
+    position: relative;
+    margin-bottom: 12px;
+  }
+
+  .code-block {
+    overflow-x: auto;
+    border-radius: 14px;
+    background: var(--ag-code-bg);
+    color: var(--ag-code-text);
+    padding: 16px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .copy-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    border: none;
+    border-radius: 8px;
+    background: var(--ag-primary);
+    color: #fff;
+    padding: 6px 12px;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .copy-btn:active {
+    transform: scale(0.98);
+  }
+
+  .mini-label {
+    margin-bottom: 8px;
+    color: var(--color-text-secondary, var(--ag-muted));
+    font-size: 10px;
+    font-weight: 700;
+  }
+</style>
+</head>
+<body>
+
+<div class="ag-wrap">
+  <div class="tab-row">
+    <button class="tab active" data-name="profil" type="button" onclick="switchTab('profil')">① Profil Grid</button>
+    <button class="tab" data-name="istatistik" type="button" onclick="switchTab('istatistik')">② İstatistik Grafik</button>
+  </div>
+
+  <div class="panel active" id="panel-profil">
+    <div class="success">🎯 Hedef: Bottom sheet'i Netflix tarzı koyu grid'e çevir + uyum badge'leri ekle</div>
+
+    <div class="section-label">Adım 1 — Profil Seçici Bottom Sheet</div>
+    <div class="info-card">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text">Aşağıdaki promptu Antigravity'e yapıştır</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text">home_screen.dart'taki <b>_showProfileSwitcherSheet</b> fonksiyonunu tamamen değiştirecek</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-text">Uygula → ekran görüntüsü at → birlikte kontrol edelim</div>
+      </div>
+    </div>
+
+    <div class="section-label">Antigravity Promptu</div>
+    <div class="prompt-shell">
+      <pre class="code-block" id="prompt-profil">home_screen.dart dosyamdaki _showProfileSwitcherSheet fonksiyonunu aşağıdaki tasarıma göre tamamen yeniden yaz.
+
+HEDEF TASARIM:
+- Koyu gradient arka plan (Color(0xFF1F1535) → Color(0xFF2D1F4E))
+- Profiller 2 sütunlu GridView olarak gösterilsin
+- Her profil kartı:
+  • Büyük yuvarlak avatar (gradient renk, 60x60)
+  • İsim ve rol etiketi
+  • O günkü uyum chip'i (örn: "3/5 ✓" yeşil, "2 atlandı" kırmızı)
+  • Aktif profilde mor border (2px, Color(0xFF7C3AED))
+  • Atlanmış doz varsa avatar üzerinde kırmızı sayı badge
+- En sona "Profil Ekle" kartı (dashed border, + ikonu)
+- Alt kısımda "Profilleri Yönet" ghost butonu
+
+MEVCUT KOD:
+_showProfileSwitcherSheet fonksiyonu şu an profiles listesini
+düz ListTile olarak gösteriyor. Bunu aşağıdaki yapıya çevir:
+
+showModalBottomSheet(
+  backgroundColor: Colors.transparent,
+  builder: (ctx) => Container(
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        colors: [Color(0xFF1F1535), Color(0xFF2D1F4E)],
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+      ),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+    ),
+    child: Column(
+      children: [
+        // Drag handle
+        // Başlık: "Kim kullanıyor?" + "Geç" butonu
+        // GridView.count(crossAxisCount: 2) — profil kartları
+        // "Profil Ekle" son kart (dashed)
+        // Alt: "Profilleri Yönet" butonu
+      ],
+    ),
+  ),
+)
+
+Her profil kartında uyum verisi için:
+HiveService.getDoseLogsForDate(DateTime.now()) kullanarak
+o profil için taken/total hesapla ve chip olarak göster.
+
+Renk sabitleri:
+- Primary: Color(0xFF7C3AED)
+- DarkBg: Color(0xFF1F1535)
+- DarkCard: Color(0xFF2D1F4E)
+- Success: Color(0xFF10B981)
+- Danger: Color(0xFFEF4444)
+
+Font: GoogleFonts.nunito kullan (mevcut kodla tutarlı)</pre>
+      <button class="copy-btn" type="button" onclick="copyText('prompt-profil', this)">Kopyala</button>
+    </div>
+
+    <div class="warn">⚠ Antigravity profil başına uyum hesabı yapamıyorsa şunu söyle: "HiveService.getDoseLogsForDate(DateTime.now()) metodunu activeProfileId parametresi alacak şekilde güncelle veya mevcut profil için filtrele"</div>
+
+    <div class="section-label">Beklenen Sonuç</div>
+    <div class="preview-box">
+      <div style="border-radius:16px; background:linear-gradient(160deg, #1f1535, #2d1f4e); padding:16px;">
+        <div style="margin-bottom:12px; text-align:center; font-size:12px; color:rgba(255, 255, 255, 0.5);">Kim kullanıyor?</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <div style="border:2px solid #7c3aed; border-radius:12px; background:rgba(124, 58, 237, 0.25); padding:12px; text-align:center;">
+            <div style="margin:0 auto 6px; display:flex; width:44px; height:44px; align-items:center; justify-content:center; border-radius:999px; background:linear-gradient(135deg, #7c3aed, #a78bfa); color:#fff; font-size:18px; font-weight:700;">Y</div>
+            <div style="font-size:11px; font-weight:700; color:#fff;">Yakup</div>
+            <div style="display:inline-block; margin-top:4px; border-radius:8px; background:rgba(16, 185, 129, 0.3); padding:2px 7px; color:#6ee7b7; font-size:8px;">3/5 ✓</div>
+          </div>
+          <div style="position:relative; border:1px solid rgba(255, 255, 255, 0.1); border-radius:12px; background:rgba(255, 255, 255, 0.06); padding:12px; text-align:center;">
+            <div style="position:relative; display:inline-block;">
+              <div style="margin:0 auto 6px; display:flex; width:44px; height:44px; align-items:center; justify-content:center; border-radius:999px; background:linear-gradient(135deg, #0891b2, #67e8f9); color:#fff; font-size:18px; font-weight:700;">B</div>
+              <div style="position:absolute; top:-3px; right:-3px; display:flex; width:16px; height:16px; align-items:center; justify-content:center; border:2px solid #2d1f4e; border-radius:999px; background:#ef4444; color:#fff; font-size:8px; font-weight:700;">2</div>
+            </div>
+            <div style="font-size:11px; font-weight:700; color:#fff;">Babam</div>
+            <div style="display:inline-block; margin-top:4px; border-radius:8px; background:rgba(239, 68, 68, 0.3); padding:2px 7px; color:#fca5a5; font-size:8px;">2 atlandı</div>
+          </div>
+          <div style="border:1.5px dashed rgba(255, 255, 255, 0.2); border-radius:12px; background:rgba(255, 255, 255, 0.04); padding:12px; text-align:center;">
+            <div style="margin:0 auto 6px; display:flex; width:44px; height:44px; align-items:center; justify-content:center; border-radius:999px; background:rgba(255, 255, 255, 0.08); color:rgba(255, 255, 255, 0.35); font-size:22px;">+</div>
+            <div style="font-size:10px; color:rgba(255, 255, 255, 0.4);">Profil Ekle</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel-istatistik">
+    <div class="success">🎯 Hedef: fl_chart ile bar grafik + GridView heatmap + ilaç bazlı breakdown ekle</div>
+
+    <div class="section-label">Paket Kontrolü — Önce Bunu Yap</div>
+    <div class="info-card">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text">pubspec.yaml'da <b>fl_chart</b> var mı kontrol et. Yoksa Antigravity'e "pubspec.yaml'a fl_chart: ^0.68.0 ekle" de</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text">Sonra stats_screen.dart için aşağıdaki promptu ver</div>
+      </div>
+    </div>
+
+    <div class="section-label">Antigravity Promptu — İstatistik Ekranı</div>
+    <div class="prompt-shell">
+      <pre class="code-block" id="prompt-stats">stats_screen.dart dosyasını aşağıdaki bölümleri ekleyerek güncelle.
+
+EKLENECEK 3 BÖLÜM:
+
+━━━━━━━━━━━━━━━━━━━━
+BÖLÜM 1: Haftalık Bar Grafik
+━━━━━━━━━━━━━━━━━━━━
+fl_chart paketi ile BarChart widget'ı ekle.
+
+Veri kaynağı: Son 7 gün için her günün
+HiveService.getDoseLogsForDate(date) sonucunu al,
+taken / total oranını hesapla (0.0 - 1.0).
+
+Görsel özellikler:
+- Bar rengi: oran > 0.7 → Color(0xFF7C3AED)
+              oran < 0.4 → Color(0xFFEF4444)
+              arası → Color(0xFFF59E0B)
+- Bar border radius: 4px (sadece üst köşeler)
+- X ekseni: Pt, Sa, Ça, Pe, Cu, Ct, Pz
+- Y ekseni gizle
+- Grid çizgileri: yatay, hafif opaklık
+- Yükseklik: 100px
+- Arka plan: white card, border radius 16px
+
+━━━━━━━━━━━━━━━━━━━━
+BÖLÜM 2: Isı Haritası (GitHub tarzı)
+━━━━━━━━━━━━━━━━━━━━
+Son 35 günü (5 satır x 7 sütun) 5x7 GridView ile göster.
+
+Her hücre:
+- Boyut: 14x14px, border radius 3px
+- Renk: Color(0xFF7C3AED).withOpacity(günlük_oran)
+  Oran 0 ise → Color(0xFFEDE9FE)
+  Oran 1 ise → Color(0xFF7C3AED) tam dolu
+- Tıklanınca o günün tarihini göster (SnackBar yeterli)
+
+Alt kısımda renk skalası göster:
+Row: "Az" | 4 kare (opaklık 0.1, 0.4, 0.7, 1.0) | "Çok"
+
+━━━━━━━━━━━━━━━━━━━━
+BÖLÜM 3: İlaç Bazlı Breakdown
+━━━━━━━━━━━━━━━━━━━━
+Her aktif ilaç için bir satır:
+- Sol: ilaç ikonu (form tipine göre emoji) + isim
+- Orta: Son 7 günü 7 küçük kare ile göster
+  (7x7px, alındı=mor, atlandı=kırmızı, bekliyor=gri)
+- Sağ: Yüzde (örn: %86)
+
+Veriyi HiveService.getActiveMedicines() ve
+getDoseLogsForDate() ile hesapla.
+
+DÜZEN:
+Mevcut tab sistemi korunsun (Hafta/Ay/3 Ay).
+- Hafta tabı: Bar grafik + ilaç breakdown
+- Ay tabı: Isı haritası (30 gün) + ilaç breakdown
+- 3 Ay tabı: Isı haritası (90 gün) + genel özet
+
+RENK SABİTLERİ:
+- Primary: Color(0xFF7C3AED)
+- Success: Color(0xFF10B981)
+- Warning: Color(0xFFF59E0B)
+- Danger: Color(0xFFEF4444)
+- Surface: Color(0xFFF5F3FF)
+
+Font: GoogleFonts.nunito (mevcut ile tutarlı)
+Tüm kartlar: elevation 0, border Color(0xFFEDE9FE)</pre>
+      <button class="copy-btn" type="button" onclick="copyText('prompt-stats', this)">Kopyala</button>
+    </div>
+
+    <div class="warn">⚠ fl_chart import hatası verirse: "import 'package:fl_chart/fl_chart.dart'; satırını stats_screen.dart'ın başına ekle" de</div>
+    <div class="warn">⚠ Eğer HiveService profil bazlı filtreleme yapmıyorsa: "getDoseLogsForDate metoduna aktif profil filtresi ekle" de</div>
+
+    <div class="section-label">Beklenen Sonuç Önizlemesi</div>
+    <div class="preview-box">
+      <div class="mini-label">Haftalık Bar Grafik</div>
+      <div style="border:1px solid #ede9fe; border-radius:12px; background:#fff; padding:12px;">
+        <div style="display:flex; height:60px; align-items:flex-end; gap:5px;">
+          <div style="display:flex; flex:1; flex-direction:column; align-items:center; gap:3px;">
+            <div style="width:100%; height:50px; border-radius:3px 3px 0 0; background:#7c3aed;"></div>
+            <div style="font-size:8px; color:#9ca3af;">Pt</div>
+          </div>
+          <div style="display:flex; flex:1; flex-direction:column; align-items:center; gap:3px;">
+            <div style="width:100%; height:20px; border-radius:3px 3px 0 0; background:#ede9fe;"></div>
+            <div style="font-size:8px; color:#9ca3af;">Sa</div>
+          </div>
+          <div style="display:flex; flex:1; flex-direction:column; align-items:center; gap:3px;">
+            <div style="width:100%; height:48px; border-radius:3px 3px 0 0; background:#7c3aed;"></div>
+            <div style="font-size:8px; color:#9ca3af;">Ça</div>
+          </div>
+          <div style="display:flex; flex:1; flex-direction:column; align-items:center; gap:3px;">
+            <div style="width:100%; height:14px; border-radius:3px 3px 0 0; background:#ef4444; opacity:0.7;"></div>
+            <div style="font-size:8px; color:#9ca3af;">Pe</div>
+          </div>
+          <div style="display:flex; flex:1; flex-direction:column; align-items:center; gap:3px;">
+            <div style="width:100%; height:52px; border-radius:3px 3px 0 0; background:#7c3aed;"></div>
+            <div style="font-size:8px; color:#9ca3af;">Cu</div>
+          </div>
+          <div style="display:flex; flex:1; flex-direction:column; align-items:center; gap:3px;">
+            <div style="width:100%; height:44px; border-radius:3px 3px 0 0; background:#7c3aed;"></div>
+            <div style="font-size:8px; color:#9ca3af;">Ct</div>
+          </div>
+          <div style="display:flex; flex:1; flex-direction:column; align-items:center; gap:3px;">
+            <div style="width:100%; height:4px; border-radius:3px 3px 0 0; background:#f5f3ff;"></div>
+            <div style="font-size:8px; color:#9ca3af;">Pz</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mini-label" style="margin-top:10px;">Isı Haritası (5×7)</div>
+      <div style="border:1px solid #ede9fe; border-radius:12px; background:#fff; padding:12px;">
+        <div style="display:flex; flex-direction:column; gap:2px;">
+          <div style="display:flex; gap:2px;">
+            <div style="width:14px; height:14px; border-radius:3px; background:#7c3aed;"></div>
+            <div style="width:14px; height:14px; border-radius:3px; background:#7c3aed; opacity:0.6;"></div>
+            <div style="width:14px; height:14px; border-radius:3px; background:#ede9fe;"></div>
+            <div style="width:14px; height:14px; border-radius:3px; background:#7c3aed;"></div>
+            <div style="width:14px; height:14px; border-radius:3px; background:#7c3aed; opacity:0.8;"></div>
+            <div style="width:14px; height:14px; border-radius:3px; background:#7c3aed;"></div>
+            <div style="width:14px; height:14px; border-radius:3px; background:#ede9fe;"></div>
+          </div>
+          <div style="display:flex; gap:2px;">
+            <div style="width:14px; height:14px; border-radius:3px; background:#7c3aed; opacity:0.9;"></div>
+            <div style="width:14px; height:14px; border-radius:3px; background:#7c3aed;"></div>
+            <div style="width:14px; height:14px; border-radius:3px; background:#7c3aed; opacity:0.7;"></div>
+            <div style="width:14px; height:14px; border-radius:3px; background:#ede9fe;"></div>
+            <div style="width:14px; height:14px; border-radius:3px; background:#7c3aed;"></div>
+            <div style="width:14px; height:14px; border-radius:3px; background:#7c3aed; opacity:0.5;"></div>
+            <div style="width:14px; height:14px; border-radius:3px; background:#7c3aed;"></div>
+          </div>
+          <div style="display:flex; gap:2px;">
+            <div style="width:14px; height:14px; border-radius:3px; background:#ede9fe;"></div>
+            <div style="width:14px; height:14px; border-radius:3px; background:#7c3aed; opacity:0.8;"></div>
+            <div style="width:14px; height:14px; border-radius:3px; background:#7c3aed;"></div>
+            <div style="width:14px; height:14px; border-radius:3px; background:#7c3aed; opacity:0.9;"></div>
+            <div style="width:14px; height:14px; border-radius:3px; background:#7c3aed; opacity:0.6;"></div>
+            <div style="width:14px; height:14px; border-radius:3px; background:#7c3aed;"></div>
+            <div style="width:14px; height:14px; border-radius:3px; background:#7c3aed;"></div>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; justify-content:flex-end; gap:3px; margin-top:5px;">
+          <div style="font-size:7px; color:#9ca3af;">Az</div>
+          <div style="width:8px; height:8px; border-radius:2px; background:#ede9fe;"></div>
+          <div style="width:8px; height:8px; border-radius:2px; background:#7c3aed; opacity:0.4;"></div>
+          <div style="width:8px; height:8px; border-radius:2px; background:#7c3aed; opacity:0.7;"></div>
+          <div style="width:8px; height:8px; border-radius:2px; background:#7c3aed;"></div>
+          <div style="font-size:7px; color:#9ca3af;">Çok</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function switchTab(name) {
+    document.querySelectorAll('.tab').forEach((tab) => {
+      tab.classList.toggle('active', tab.dataset.name === name);
+    });
+
+    document.querySelectorAll('.panel').forEach((panel) => {
+      panel.classList.toggle('active', panel.id === 'panel-' + name);
+    });
+  }
+
+  function copyText(id, btn) {
+    const text = document.getElementById(id).innerText.trim();
+    navigator.clipboard.writeText(text).then(() => {
+      const previous = btn.textContent;
+      btn.textContent = 'Kopyalandı ✓';
+      setTimeout(() => {
+        btn.textContent = previous;
+      }, 2000);
+    });
+  }
+</script>
+</body>
+</html>

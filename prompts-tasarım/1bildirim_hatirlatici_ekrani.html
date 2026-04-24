@@ -1,0 +1,366 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans); }
+.sl { font-size: 11px; font-weight: 500; color: var(--color-text-secondary); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 10px; }
+.phone-outer { background: var(--color-background-secondary); border-radius: var(--border-radius-lg); padding: 20px; display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px; }
+.phone { width: 200px; background: #f8f7ff; border-radius: 28px; overflow: hidden; border: 2px solid #e0ddf7; flex-shrink: 0; }
+.ph { background: #7C3AED; height: 10px; border-radius: 8px 8px 0 0; }
+.topbar { background: #7C3AED; padding: 11px 13px 10px; color: white; display: flex; align-items: center; gap: 7px; }
+.back-btn { width: 22px; height: 22px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; }
+.body { padding: 9px 11px 11px; }
+
+/* Bildirim kartları */
+.notif { background: white; border-radius: 14px; padding: 10px 11px; margin-bottom: 7px; border: 1px solid #EDE9FE; display: flex; gap: 8px; align-items: flex-start; }
+.notif-icon { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+.notif-actions { display: flex; gap: 5px; margin-top: 6px; }
+.btn-yes { background: #7C3AED; color: white; border-radius: 8px; padding: 4px 10px; font-size: 8px; font-weight: 600; }
+.btn-no { background: #F5F3FF; color: #7C3AED; border: 1px solid #DDD6FE; border-radius: 8px; padding: 4px 10px; font-size: 8px; font-weight: 500; }
+.btn-snooze { background: #FEF3C7; color: #92400E; border-radius: 8px; padding: 4px 10px; font-size: 8px; font-weight: 500; }
+
+/* Alarm listesi */
+.alarm-row { background: white; border: 1px solid #EDE9FE; border-radius: 12px; padding: 9px 11px; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+.toggle { width: 30px; height: 16px; border-radius: 8px; position: relative; flex-shrink: 0; }
+.toggle-knob { width: 12px; height: 12px; border-radius: 50%; background: white; position: absolute; top: 2px; }
+.time-badge { background: #EDE9FE; border-radius: 8px; padding: 3px 8px; font-size: 13px; font-weight: 700; color: #5B21B6; min-width: 46px; text-align: center; }
+
+/* Kilit ekranı bildirimi */
+.lockscreen { background: linear-gradient(160deg, #1a0a2e 0%, #2d1f4e 100%); border-radius: 24px; overflow: hidden; }
+.lock-time { text-align: center; padding: 16px 0 10px; color: white; }
+.lock-notif { background: rgba(255,255,255,0.12); border-radius: 14px; margin: 0 10px 8px; padding: 10px 12px; backdrop-filter: blur(10px); }
+.lock-actions { display: flex; gap: 6px; margin: 0 10px 10px; }
+.lock-btn { flex: 1; border-radius: 10px; padding: 7px; text-align: center; font-size: 9px; font-weight: 600; }
+
+/* Sesli bildirim dalgası */
+.wave-row { display: flex; align-items: center; gap: 2px; height: 20px; }
+.wave-bar { width: 3px; border-radius: 2px; background: #A78BFA; }
+
+.card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 14px; margin-bottom: 14px; }
+.section { margin-bottom: 24px; }
+.annotation { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 10px; }
+.ann-dot { width: 18px; height: 18px; border-radius: 50%; background: #7C3AED; display: flex; align-items: center; justify-content: center; font-size: 9px; color: white; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+.flutter-block { background: #1e1e2e; border-radius: var(--border-radius-md); padding: 12px; font-family: var(--font-mono); font-size: 11px; color: #cdd6f4; line-height: 1.7; margin-bottom: 8px; }
+.kw{color:#89b4fa} .str{color:#a6e3a1} .num{color:#fab387} .cls{color:#f38ba8} .cm{color:#6c7086}
+</style>
+
+<div style="padding:1rem 0;">
+
+<div class="section">
+  <div class="sl">Dört Bildirim Senaryosu</div>
+  <div class="phone-outer">
+
+    <!-- Ekran 1: Uygulama İçi Bildirim -->
+    <div>
+      <div style="text-align:center;font-size:10px;color:var(--color-text-secondary);margin-bottom:6px;">Uygulama İçi</div>
+      <div class="phone">
+        <div class="ph"></div>
+        <div class="topbar">
+          <div class="back-btn">←</div>
+          <div style="font-size:12px;font-weight:600;flex:1;">Bildirimler</div>
+          <div style="font-size:9px;background:rgba(255,255,255,0.2);border-radius:8px;padding:3px 7px;">Tümünü Temizle</div>
+        </div>
+        <div class="body">
+
+          <div style="font-size:8px;font-weight:600;color:#7C3AED;margin-bottom:5px;text-transform:uppercase;letter-spacing:0.05em;">Şimdi · 14:00</div>
+
+          <!-- Acil bildirim -->
+          <div class="notif" style="border-color:#EF4444;border-width:1.5px;">
+            <div class="notif-icon" style="background:#FEE2E2;">💊</div>
+            <div style="flex:1;">
+              <div style="font-size:10px;font-weight:600;color:#991B1B;margin-bottom:2px;">Aspirin 100mg · Şimdi!</div>
+              <div style="font-size:8px;color:#6b7280;line-height:1.4;">Öğle dozun 15 dk önce geldi. Henüz onaylanmadı.</div>
+              <div class="notif-actions">
+                <div class="btn-yes">✓ Aldım</div>
+                <div class="btn-snooze">⏰ 15 dk</div>
+                <div class="btn-no">Atla</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="font-size:8px;font-weight:600;color:#9ca3af;margin-bottom:5px;margin-top:8px;text-transform:uppercase;letter-spacing:0.05em;">Bugün · Tamamlandı</div>
+
+          <!-- Tamamlanan bildirim -->
+          <div class="notif" style="opacity:0.65;">
+            <div class="notif-icon" style="background:#D1FAE5;">✅</div>
+            <div style="flex:1;">
+              <div style="font-size:10px;font-weight:600;color:#374151;margin-bottom:2px;">Metformin 500mg</div>
+              <div style="font-size:8px;color:#6b7280;">08:00 · Alındı olarak işaretlendi</div>
+            </div>
+          </div>
+
+          <div class="notif" style="opacity:0.65;">
+            <div class="notif-icon" style="background:#D1FAE5;">✅</div>
+            <div style="flex:1;">
+              <div style="font-size:10px;font-weight:600;color:#374151;margin-bottom:2px;">Vitamin D3</div>
+              <div style="font-size:8px;color:#6b7280;">09:30 · Alındı olarak işaretlendi</div>
+            </div>
+          </div>
+
+          <div style="font-size:8px;font-weight:600;color:#9ca3af;margin-bottom:5px;margin-top:8px;text-transform:uppercase;letter-spacing:0.05em;">Stok Uyarısı</div>
+
+          <div class="notif" style="border-color:#F59E0B;">
+            <div class="notif-icon" style="background:#FEF3C7;">📦</div>
+            <div style="flex:1;">
+              <div style="font-size:10px;font-weight:600;color:#92400E;margin-bottom:2px;">Aspirin stoğu azalıyor</div>
+              <div style="font-size:8px;color:#6b7280;line-height:1.4;">5 tablet kaldı · ~5 günlük stok</div>
+              <div class="notif-actions">
+                <div class="btn-yes">Eczaneyi Bul</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Gemini önerisi -->
+          <div style="background:linear-gradient(135deg,#7C3AED,#A78BFA);border-radius:12px;padding:9px 11px;margin-top:8px;">
+            <div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;">
+              <span style="font-size:11px;">✦</span>
+              <span style="font-size:9px;font-weight:600;color:white;">Gemini Önerisi</span>
+            </div>
+            <div style="font-size:8px;color:rgba(255,255,255,0.9);line-height:1.4;">Perşembe öğle dozunu 3 haftadır kaçırıyorsun. Alarmı 13:30'a taşıyayım mı?</div>
+            <div style="display:flex;gap:5px;margin-top:6px;">
+              <div style="background:white;color:#7C3AED;border-radius:8px;padding:4px 10px;font-size:8px;font-weight:600;">Evet ✓</div>
+              <div style="background:rgba(255,255,255,0.2);color:white;border-radius:8px;padding:4px 10px;font-size:8px;">Hayır</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Ekran 2: Alarm Yönetimi -->
+    <div>
+      <div style="text-align:center;font-size:10px;color:var(--color-text-secondary);margin-bottom:6px;">Alarm Yönetimi</div>
+      <div class="phone">
+        <div class="ph"></div>
+        <div class="topbar">
+          <div class="back-btn">←</div>
+          <div style="font-size:12px;font-weight:600;flex:1;">Hatırlatıcılar</div>
+          <div style="font-size:14px;background:rgba(255,255,255,0.2);border-radius:8px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;">+</div>
+        </div>
+        <div class="body">
+
+          <div style="font-size:8px;font-weight:600;color:#7C3AED;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em;">Aktif Alarmlar (4)</div>
+
+          <div class="alarm-row">
+            <div>
+              <div class="time-badge">08:00</div>
+            </div>
+            <div style="flex:1;">
+              <div style="font-size:10px;font-weight:600;color:#1f1f1f;">Sabah Dozu</div>
+              <div style="font-size:8px;color:#6b7280;">Metformin · Her gün</div>
+            </div>
+            <div class="toggle" style="background:#7C3AED;">
+              <div class="toggle-knob" style="right:2px;"></div>
+            </div>
+          </div>
+
+          <div class="alarm-row">
+            <div>
+              <div class="time-badge">13:30</div>
+            </div>
+            <div style="flex:1;">
+              <div style="font-size:10px;font-weight:600;color:#1f1f1f;">Öğle Dozu</div>
+              <div style="font-size:8px;color:#6b7280;">Aspirin · Hf–Cu</div>
+              <div style="font-size:7px;color:#A78BFA;margin-top:1px;">✦ Gemini tarafından ayarlandı</div>
+            </div>
+            <div class="toggle" style="background:#7C3AED;">
+              <div class="toggle-knob" style="right:2px;"></div>
+            </div>
+          </div>
+
+          <div class="alarm-row">
+            <div>
+              <div class="time-badge">18:00</div>
+            </div>
+            <div style="flex:1;">
+              <div style="font-size:10px;font-weight:600;color:#1f1f1f;">İkinci Sabah</div>
+              <div style="font-size:8px;color:#6b7280;">Metformin · Her gün</div>
+            </div>
+            <div class="toggle" style="background:#7C3AED;">
+              <div class="toggle-knob" style="right:2px;"></div>
+            </div>
+          </div>
+
+          <div class="alarm-row" style="opacity:0.55;">
+            <div>
+              <div class="time-badge" style="background:#F3F4F6;color:#9ca3af;">20:00</div>
+            </div>
+            <div style="flex:1;">
+              <div style="font-size:10px;font-weight:600;color:#6b7280;">Gece Dozu</div>
+              <div style="font-size:8px;color:#9ca3af;">Vitamin D · Her gün</div>
+            </div>
+            <div class="toggle" style="background:#E5E7EB;">
+              <div class="toggle-knob" style="left:2px;"></div>
+            </div>
+          </div>
+
+          <div style="height:0.5px;background:#EDE9FE;margin:10px 0;"></div>
+          <div style="font-size:8px;font-weight:600;color:#9ca3af;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.05em;">Bildirim Ayarları</div>
+
+          <div style="background:white;border:1px solid #EDE9FE;border-radius:12px;overflow:hidden;">
+            <div style="padding:8px 11px;display:flex;justify-content:space-between;align-items:center;border-bottom:0.5px solid #EDE9FE;">
+              <div>
+                <div style="font-size:10px;font-weight:500;color:#1f1f1f;">Titreşim</div>
+                <div style="font-size:8px;color:#9ca3af;">Sessiz modda da çalışır</div>
+              </div>
+              <div class="toggle" style="background:#7C3AED;"><div class="toggle-knob" style="right:2px;"></div></div>
+            </div>
+            <div style="padding:8px 11px;display:flex;justify-content:space-between;align-items:center;border-bottom:0.5px solid #EDE9FE;">
+              <div>
+                <div style="font-size:10px;font-weight:500;color:#1f1f1f;">Sesli Hatırlatma</div>
+                <div style="font-size:8px;color:#9ca3af;">Türkçe ses bildirimi</div>
+              </div>
+              <div class="toggle" style="background:#7C3AED;"><div class="toggle-knob" style="right:2px;"></div></div>
+            </div>
+            <div style="padding:8px 11px;display:flex;justify-content:space-between;align-items:center;">
+              <div>
+                <div style="font-size:10px;font-weight:500;color:#1f1f1f;">Aile Bildirimi</div>
+                <div style="font-size:8px;color:#9ca3af;">Doz alındığında ailem bilgilensin</div>
+              </div>
+              <div class="toggle" style="background:#E5E7EB;"><div class="toggle-knob" style="left:2px;"></div></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Ekran 3: Kilit Ekranı Bildirimi -->
+    <div>
+      <div style="text-align:center;font-size:10px;color:var(--color-text-secondary);margin-bottom:6px;">Kilit Ekranı & Pop-up</div>
+      <div class="phone">
+        <div class="ph"></div>
+        <div class="lockscreen">
+          <div class="lock-time">
+            <div style="font-size:28px;font-weight:300;letter-spacing:2px;">14:00</div>
+            <div style="font-size:9px;opacity:0.6;margin-top:2px;">Perşembe, 24 Nisan</div>
+          </div>
+
+          <!-- Kilit ekranı bildirim kartı -->
+          <div class="lock-notif">
+            <div style="display:flex;align-items:center;gap:7px;margin-bottom:6px;">
+              <div style="width:22px;height:22px;border-radius:7px;background:rgba(124,58,237,0.8);display:flex;align-items:center;justify-content:center;font-size:11px;">💊</div>
+              <div>
+                <div style="font-size:9px;font-weight:600;color:white;">MediTrack</div>
+                <div style="font-size:7px;color:rgba(255,255,255,0.6);">şimdi</div>
+              </div>
+            </div>
+            <div style="font-size:10px;font-weight:600;color:white;margin-bottom:2px;">Aspirin 100mg · Öğle Dozu</div>
+            <div style="font-size:8px;color:rgba(255,255,255,0.75);line-height:1.4;">Ayşe için öğle dozu zamanı geldi. Hızlıca yanıtla:</div>
+          </div>
+
+          <div class="lock-actions">
+            <div class="lock-btn" style="background:rgba(16,185,129,0.85);color:white;">✓ Aldım</div>
+            <div class="lock-btn" style="background:rgba(245,158,11,0.85);color:white;">⏰ Ertele</div>
+            <div class="lock-btn" style="background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.8);">Atla</div>
+          </div>
+
+          <!-- Sesli bildirim göstergesi -->
+          <div style="background:rgba(255,255,255,0.08);border-radius:12px;margin:0 10px 10px;padding:8px 11px;display:flex;align-items:center;gap:8px;">
+            <div style="font-size:11px;">🔊</div>
+            <div style="flex:1;">
+              <div style="font-size:8px;color:rgba(255,255,255,0.9);font-weight:500;">Sesli Hatırlatma</div>
+              <div style="font-size:7px;color:rgba(255,255,255,0.5);">"Aspirin dozunuzu almayı unutmayın"</div>
+            </div>
+            <div class="wave-row">
+              <div class="wave-bar" style="height:6px;"></div>
+              <div class="wave-bar" style="height:14px;"></div>
+              <div class="wave-bar" style="height:10px;"></div>
+              <div class="wave-bar" style="height:18px;"></div>
+              <div class="wave-bar" style="height:8px;"></div>
+              <div class="wave-bar" style="height:14px;"></div>
+              <div class="wave-bar" style="height:6px;"></div>
+            </div>
+          </div>
+
+          <!-- Stok uyarısı da kilit ekranında -->
+          <div class="lock-notif" style="margin-bottom:10px;">
+            <div style="display:flex;align-items:center;gap:7px;">
+              <div style="width:22px;height:22px;border-radius:7px;background:rgba(245,158,11,0.8);display:flex;align-items:center;justify-content:center;font-size:11px;">📦</div>
+              <div>
+                <div style="font-size:9px;font-weight:500;color:white;">Aspirin stoğu azalıyor — 5 tablet kaldı</div>
+                <div style="font-size:7px;color:rgba(255,255,255,0.5);">5 dakika önce</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <div style="background:#f8f7ff;padding:8px 11px;">
+          <div style="font-size:8px;color:#9ca3af;text-align:center;">Kilidi açmak için kaydır</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="section">
+  <div class="sl">Tasarım Kararları</div>
+  <div class="card">
+    <div class="annotation">
+      <div class="ann-dot">1</div>
+      <div><span style="font-size:13px;font-weight:500;color:var(--color-text-primary);">Kilit ekranından direkt onay</span><br><span style="font-size:12px;color:var(--color-text-secondary);">Kullanıcı uygulamayı açmak zorunda kalmadan "Aldım / Ertele / Atla" yapabiliyor. Yaşlı kullanıcılar için bu oyun değiştirici — özellikle telefon kilidini açmakta zorlananlar için.</span></div>
+    </div>
+    <div class="annotation">
+      <div class="ann-dot">2</div>
+      <div><span style="font-size:13px;font-weight:500;color:var(--color-text-primary);">Sesli Türkçe hatırlatma</span><br><span style="font-size:12px;color:var(--color-text-secondary);">Flutter TTS ile "Aspirin dozunuzu almayı unutmayın" gibi Türkçe sesli bildirim. Görme güçlüğü çeken yaşlı kullanıcılar için kritik erişilebilirlik özelliği.</span></div>
+    </div>
+    <div class="annotation">
+      <div class="ann-dot">3</div>
+      <div><span style="font-size:13px;font-weight:500;color:var(--color-text-primary);">Gemini etiketli alarm</span><br><span style="font-size:12px;color:var(--color-text-secondary);">AI'ın önerisiyle değiştirilen alarmda "✦ Gemini tarafından ayarlandı" etiketi var. Kullanıcı güveni inşa eder — ne zaman ve neden değiştiğini biliyor.</span></div>
+    </div>
+    <div class="annotation">
+      <div class="ann-dot">4</div>
+      <div><span style="font-size:13px;font-weight:500;color:var(--color-text-primary);">Aile bildirimi toggle</span><br><span style="font-size:12px;color:var(--color-text-secondary);">Doz alındığında aile üyelerine push notification gitsin seçeneği. Bakıcı modunun bildirim tarafı — uygulamayı tek kullanıcıdan aile platformuna taşıyan özellik.</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="sl">Flutter Kod Referansı</div>
+  <div class="flutter-block">
+<span class="cm">// flutter_local_notifications kurulumu</span><br>
+<span class="kw">Future</span>&lt;<span class="kw">void</span>&gt; scheduleMedicineReminder(<span class="cls">Medicine</span> med) <span class="kw">async</span> {<br>
+&nbsp;&nbsp;<span class="kw">await</span> notifications.zonedSchedule(<br>
+&nbsp;&nbsp;&nbsp;&nbsp;med.id,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="str">'${med.name} · ${med.doseLabel}'</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="str">'Dozunuzu almayı unutmayın 💊'</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;nextInstanceOfTime(med.reminderTime),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;notificationDetails,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;androidScheduleMode: <span class="cls">AndroidScheduleMode</span>.exactAllowWhileIdle,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;matchDateTimeComponents: <span class="cls">DateTimeComponents</span>.time,<br>
+&nbsp;&nbsp;);<br>
+}
+  </div>
+  <div class="flutter-block">
+<span class="cm">// Türkçe sesli hatırlatma (flutter_tts)</span><br>
+<span class="kw">final</span> tts = <span class="cls">FlutterTts</span>();<br><br>
+<span class="kw">Future</span>&lt;<span class="kw">void</span>&gt; speakReminder(<span class="cls">String</span> medicineName) <span class="kw">async</span> {<br>
+&nbsp;&nbsp;<span class="kw">await</span> tts.setLanguage(<span class="str">'tr-TR'</span>);<br>
+&nbsp;&nbsp;<span class="kw">await</span> tts.setSpeechRate(<span class="num">0.45</span>); <span class="cm">// yaşlı kullanıcı için yavaş</span><br>
+&nbsp;&nbsp;<span class="kw">await</span> tts.speak(<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="str">'$medicineName dozunuzu almayı unutmayın.'</span>,<br>
+&nbsp;&nbsp;);<br>
+}
+  </div>
+  <div class="flutter-block">
+<span class="cm">// Kilit ekranı aksiyon butonu (notification action)</span><br>
+<span class="kw">const</span> notifDetails = <span class="cls">NotificationDetails</span>(<br>
+&nbsp;&nbsp;android: <span class="cls">AndroidNotificationDetails</span>(<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="str">'medicine_channel'</span>, <span class="str">'İlaç Hatırlatıcı'</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;actions: [<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cls">AndroidNotificationAction</span>(<span class="str">'taken'</span>, <span class="str">'✓ Aldım'</span>),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cls">AndroidNotificationAction</span>(<span class="str">'snooze'</span>, <span class="str">'⏰ 15 dk'</span>),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cls">AndroidNotificationAction</span>(<span class="str">'skip'</span>, <span class="str">'Atla'</span>),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;],<br>
+&nbsp;&nbsp;),<br>
+);
+  </div>
+</div>
+
+<div style="text-align:center;padding:4px 0;">
+  <button onclick="sendPrompt('Aile profilleri ekranının tasarımını göster')" style="margin:4px;font-size:12px;">Aile profilleri ↗</button>
+  <button onclick="sendPrompt('Onboarding ve karşılama ekranlarının tasarımını göster')" style="margin:4px;font-size:12px;">Onboarding ekranı ↗</button>
+  <button onclick="sendPrompt('Güvenlik ve biyometrik kilit ekranının tasarımını göster')" style="margin:4px;font-size:12px;">Güvenlik ekranı ↗</button>
+</div>
+
+</div>

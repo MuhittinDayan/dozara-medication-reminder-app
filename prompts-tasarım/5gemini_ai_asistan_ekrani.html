@@ -1,0 +1,330 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans); }
+.section-label { font-size: 11px; font-weight: 500; color: var(--color-text-secondary); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 10px; }
+.phone-outer { background: var(--color-background-secondary); border-radius: var(--border-radius-lg); padding: 20px; display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px; }
+.phone { width: 210px; background: #f8f7ff; border-radius: 28px; overflow: hidden; border: 2px solid #e0ddf7; flex-shrink: 0; }
+.ph { background: #7C3AED; height: 10px; border-radius: 8px 8px 0 0; }
+.topbar { background: #7C3AED; padding: 11px 14px 10px; color: white; display: flex; align-items: center; gap: 8px; }
+.back-btn { width: 22px; height: 22px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; }
+.ai-avatar { width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+.chat-body { padding: 10px; min-height: 340px; display: flex; flex-direction: column; gap: 7px; }
+.bubble-ai { background: white; border: 1px solid #EDE9FE; border-radius: 14px 14px 14px 4px; padding: 8px 10px; max-width: 85%; }
+.bubble-user { background: #7C3AED; border-radius: 14px 14px 4px 14px; padding: 8px 10px; max-width: 85%; align-self: flex-end; }
+.bubble-user p { font-size: 10px; color: white; line-height: 1.4; }
+.bubble-ai p { font-size: 10px; color: #1f1f1f; line-height: 1.4; }
+.bubble-ai .sender { font-size: 8px; color: #7C3AED; font-weight: 600; margin-bottom: 3px; display: flex; align-items: center; gap: 3px; }
+.warning-card { background: #FEF3C7; border: 1px solid #FDE68A; border-radius: 10px; padding: 7px 9px; margin-top: 5px; }
+.safe-card { background: #D1FAE5; border: 1px solid #6EE7B7; border-radius: 10px; padding: 7px 9px; margin-top: 5px; }
+.info-card { background: #EDE9FE; border: 1px solid #DDD6FE; border-radius: 10px; padding: 7px 9px; margin-top: 5px; }
+.quick-chips { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 10px 6px; }
+.q-chip { background: white; border: 1px solid #DDD6FE; border-radius: 16px; padding: 4px 9px; font-size: 8px; color: #6D28D9; font-weight: 500; }
+.input-bar { background: white; border-top: 1px solid #EDE9FE; padding: 7px 10px; display: flex; align-items: center; gap: 6px; }
+.input-field { flex: 1; background: #F5F3FF; border-radius: 16px; padding: 5px 10px; font-size: 9px; color: #9ca3af; }
+.send-btn { width: 26px; height: 26px; border-radius: 50%; background: #7C3AED; display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; }
+.mic-btn { width: 24px; height: 24px; border-radius: 50%; background: #EDE9FE; display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; }
+.typing-dot { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: #A78BFA; margin: 0 1px; }
+.card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 14px; margin-bottom: 14px; }
+.section { margin-bottom: 24px; }
+.annotation { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 10px; }
+.ann-dot { width: 18px; height: 18px; border-radius: 50%; background: #7C3AED; display: flex; align-items: center; justify-content: center; font-size: 9px; color: white; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+.flutter-block { background: #1e1e2e; border-radius: var(--border-radius-md); padding: 12px; font-family: var(--font-mono); font-size: 11px; color: #cdd6f4; line-height: 1.7; margin-bottom: 8px; }
+.kw { color: #89b4fa; }
+.str { color: #a6e3a1; }
+.num { color: #fab387; }
+.cls { color: #f38ba8; }
+.cm { color: #6c7086; }
+.prompt-box { background: #1e1e2e; border-radius: var(--border-radius-md); padding: 12px; font-family: var(--font-mono); font-size: 10px; color: #cdd6f4; line-height: 1.7; margin-bottom: 8px; border-left: 3px solid #7C3AED; }
+.prompt-var { color: #fab387; }
+.prompt-kw { color: #A78BFA; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.usecase-card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 12px; }
+</style>
+
+<div style="padding: 1rem 0;">
+
+<div class="section">
+  <div class="section-label">Üç Ana Kullanım Senaryosu</div>
+  <div class="phone-outer">
+
+    <!-- Ekran 1: Etkileşim Kontrolü -->
+    <div>
+      <div style="text-align:center; font-size:10px; color:var(--color-text-secondary); margin-bottom:6px;">Etkileşim Kontrolü</div>
+      <div class="phone">
+        <div class="ph"></div>
+        <div class="topbar">
+          <div class="back-btn">←</div>
+          <div class="ai-avatar">✦</div>
+          <div>
+            <div style="font-size:12px; font-weight:600;">AI Asistan</div>
+            <div style="font-size:8px; opacity:0.75; display:flex; align-items:center; gap:3px;"><span style="width:5px;height:5px;border-radius:50%;background:#4ade80;display:inline-block;"></span>Gemini 2.0 Flash</div>
+          </div>
+          <div style="margin-left:auto; font-size:14px;">⋮</div>
+        </div>
+
+        <div class="quick-chips">
+          <div class="q-chip">Yan etkiler?</div>
+          <div class="q-chip">Aç karnına?</div>
+          <div class="q-chip">Etkileşim?</div>
+        </div>
+
+        <div class="chat-body">
+          <div class="bubble-ai">
+            <div class="sender">✦ Gemini</div>
+            <p>Merhaba Ayşe! İlaçların hakkında sormak istediğin bir şey var mı?</p>
+          </div>
+
+          <div class="bubble-user">
+            <p>Metformin ile Aspirin birlikte alınabilir mi?</p>
+          </div>
+
+          <div class="bubble-ai">
+            <div class="sender">✦ Gemini</div>
+            <p>Profilimdeki ilaçlarına baktım:</p>
+            <div class="safe-card">
+              <div style="font-size:9px; font-weight:600; color:#065F46; margin-bottom:2px;">✓ Güvenli Kombinasyon</div>
+              <div style="font-size:8px; color:#064E3B; line-height:1.4;">Metformin + Aspirin birlikte kullanımı genel olarak güvenlidir. Ciddi bir etkileşim tespit edilmedi.</div>
+            </div>
+            <div style="margin-top:5px;">
+              <div style="font-size:8px; color:#6b7280; line-height:1.5;">⚠ Yine de doktorunu bilgilendirmeni öneririm. Bu bilgi tıbbi tavsiye değildir.</div>
+            </div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:4px; padding: 2px 0;">
+            <div class="bubble-ai" style="display:flex; align-items:center; gap:3px; padding: 6px 10px;">
+              <div class="typing-dot" style="animation: none; opacity:0.4;"></div>
+              <div class="typing-dot" style="animation: none; opacity:0.7;"></div>
+              <div class="typing-dot" style="animation: none;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="input-bar">
+          <div class="mic-btn">🎤</div>
+          <div class="input-field">Soru sor...</div>
+          <div class="send-btn">↑</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ekran 2: Uyum Analizi -->
+    <div>
+      <div style="text-align:center; font-size:10px; color:var(--color-text-secondary); margin-bottom:6px;">Kişisel Analiz</div>
+      <div class="phone">
+        <div class="ph"></div>
+        <div class="topbar">
+          <div class="back-btn">←</div>
+          <div class="ai-avatar">✦</div>
+          <div>
+            <div style="font-size:12px; font-weight:600;">Haftalık Analiz</div>
+            <div style="font-size:8px; opacity:0.75; display:flex; align-items:center; gap:3px;"><span style="width:5px;height:5px;border-radius:50%;background:#4ade80;display:inline-block;"></span>Gemini 2.0 Flash</div>
+          </div>
+        </div>
+
+        <div class="chat-body" style="gap:6px;">
+          <div class="bubble-ai" style="max-width:100%;">
+            <div class="sender">✦ Gemini · Haftalık Rapor</div>
+            <p style="margin-bottom:5px;">Bu haftaki ilaç uyum analizin hazır 📊</p>
+
+            <div style="background:#F5F3FF; border-radius:10px; padding:8px; margin-bottom:6px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                <div style="font-size:9px; font-weight:600; color:#5B21B6;">Genel Uyum</div>
+                <div style="font-size:14px; font-weight:700; color:#7C3AED;">72%</div>
+              </div>
+              <div style="height:4px; background:#EDE9FE; border-radius:2px;">
+                <div style="width:72%; height:100%; background:#7C3AED; border-radius:2px;"></div>
+              </div>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:4px; margin-bottom:6px;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div style="font-size:8px; color:#374151;">Metformin</div>
+                <div style="display:flex; gap:2px;">
+                  <div style="width:8px;height:8px;border-radius:2px;background:#7C3AED;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#7C3AED;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#EDE9FE;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#7C3AED;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#7C3AED;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#EDE9FE;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#7C3AED;"></div>
+                </div>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div style="font-size:8px; color:#374151;">Aspirin</div>
+                <div style="display:flex; gap:2px;">
+                  <div style="width:8px;height:8px;border-radius:2px;background:#7C3AED;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#EDE9FE;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#EDE9FE;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#7C3AED;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#EDE9FE;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#7C3AED;"></div>
+                  <div style="width:8px;height:8px;border-radius:2px;background:#7C3AED;"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="warning-card">
+              <div style="font-size:9px; font-weight:600; color:#92400E; margin-bottom:2px;">⚠ Gemini Tespiti</div>
+              <div style="font-size:8px; color:#78350F; line-height:1.4;">Salı ve Perşembe öğle dozlarını sık kaçırıyorsun. Alarmı 13:30'a çekeyim mi?</div>
+              <div style="display:flex; gap:5px; margin-top:6px;">
+                <div style="background:#7C3AED; color:white; border-radius:8px; padding:4px 8px; font-size:8px; font-weight:600;">Evet, ayarla</div>
+                <div style="background:white; color:#92400E; border:1px solid #FDE68A; border-radius:8px; padding:4px 8px; font-size:8px;">Hayır</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="input-bar">
+          <div class="mic-btn">🎤</div>
+          <div class="input-field">Soru sor...</div>
+          <div class="send-btn">↑</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ekran 3: İlaç Bilgisi -->
+    <div>
+      <div style="text-align:center; font-size:10px; color:var(--color-text-secondary); margin-bottom:6px;">İlaç Bilgisi</div>
+      <div class="phone">
+        <div class="ph"></div>
+        <div class="topbar">
+          <div class="back-btn">←</div>
+          <div class="ai-avatar">✦</div>
+          <div>
+            <div style="font-size:12px; font-weight:600;">AI Asistan</div>
+            <div style="font-size:8px; opacity:0.75; display:flex; align-items:center; gap:3px;"><span style="width:5px;height:5px;border-radius:50%;background:#4ade80;display:inline-block;"></span>Gemini 2.0 Flash</div>
+          </div>
+        </div>
+
+        <div class="quick-chips">
+          <div class="q-chip">Ne işe yarar?</div>
+          <div class="q-chip">Saklama?</div>
+          <div class="q-chip">Doz atladım?</div>
+        </div>
+
+        <div class="chat-body">
+          <div class="bubble-user">
+            <p>Metformin'i aç karnına içebilir miyim?</p>
+          </div>
+
+          <div class="bubble-ai">
+            <div class="sender">✦ Gemini</div>
+            <div class="warning-card" style="margin-top:0; margin-bottom:5px;">
+              <div style="font-size:9px; font-weight:600; color:#92400E; margin-bottom:2px;">⚠ Mide Rahatsızlığı Riski</div>
+              <div style="font-size:8px; color:#78350F; line-height:1.4;">Metformin aç karnına alınırsa bulantı ve mide ağrısı yapabilir.</div>
+            </div>
+            <p style="font-size:10px; line-height:1.5;">Yemekle veya yemekten hemen sonra almanı öneririm. Yutma güçlüğün varsa bölme veya ezme <b style="color:#7C3AED;">yapma</b> — tableti bütün iç.</p>
+          </div>
+
+          <div class="bubble-user">
+            <p>Dozu atladım ne yapayım?</p>
+          </div>
+
+          <div class="bubble-ai">
+            <div class="sender">✦ Gemini</div>
+            <div class="info-card" style="margin-bottom:5px;">
+              <div style="font-size:9px; font-weight:600; color:#5B21B6; margin-bottom:3px;">Kaçırılan Doz Kuralı</div>
+              <div style="font-size:8px; color:#4C1D95; line-height:1.5;">
+                <div style="margin-bottom:2px;">⏰ Fark ettiysen → <b>hemen al</b></div>
+                <div style="margin-bottom:2px;">⏭ Sonraki doza yakınsa → <b>atla</b></div>
+                <div>✗ Asla çift doz alma</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="input-bar">
+          <div class="mic-btn">🎤</div>
+          <div class="input-field">Soru sor...</div>
+          <div class="send-btn">↑</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-label">Tasarım Kararları</div>
+  <div class="card">
+    <div class="annotation">
+      <div class="ann-dot">1</div>
+      <div><span style="font-size:13px;font-weight:500;color:var(--color-text-primary);">Renkli yanıt kartları — anlam kodlama</span><br><span style="font-size:12px;color:var(--color-text-secondary);">Yeşil = güvenli, Sarı = uyarı, Mor = bilgi. Düz metin yerine kart yapısı kritik sağlık bilgisini vurgular ve taranabilir kılar.</span></div>
+    </div>
+    <div class="annotation">
+      <div class="ann-dot">2</div>
+      <div><span style="font-size:13px;font-weight:500;color:var(--color-text-primary);">Quick chip'ler — boş ekran korkusunu önler</span><br><span style="font-size:12px;color:var(--color-text-secondary);">Kullanıcı "ne soracağını bilmiyorum" hissiyle donup kalmasın. Sık sorulan 3 soru hazır chip olarak sunulur.</span></div>
+    </div>
+    <div class="annotation">
+      <div class="ann-dot">3</div>
+      <div><span style="font-size:13px;font-weight:500;color:var(--color-text-primary);">Haftalık analiz — proaktif AI</span><br><span style="font-size:12px;color:var(--color-text-secondary);">Kullanıcı sormadan önce Gemini kaçırılan doz paternini tespit eder ve alarm önerisi sunar. Actionable button direkt yanıt içinde.</span></div>
+    </div>
+    <div class="annotation">
+      <div class="ann-dot">4</div>
+      <div><span style="font-size:13px;font-weight:500;color:var(--color-text-primary);">Ses girişi — yaşlı kullanıcı dostu</span><br><span style="font-size:12px;color:var(--color-text-secondary);">Mikrofon butonu her zaman görünür. Yazmakta güçlük çeken kullanıcılar konuşarak soru sorabilir.</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-label">Gemini Sistem Promptu Şablonu</div>
+  <div class="prompt-box">
+<span class="prompt-kw">Sen MediTrack uygulamasının AI sağlık asistanısın.</span><br><br>
+Kullanıcı profili:<br>
+- İsim: <span class="prompt-var">{userName}</span><br>
+- Aktif ilaçlar: <span class="prompt-var">{medicineList}</span><br>
+- Bu haftaki uyum: <span class="prompt-var">{complianceRate}</span>%<br>
+- Kaçırılan dozlar: <span class="prompt-var">{missedDoses}</span><br><br>
+Kurallar:<br>
+1. Her yanıtı kısa ve net tut (maks 3 cümle)<br>
+2. İlaç etkileşimlerini GÜVENLİ / UYARI / TEHLİKELİ<br>
+&nbsp;&nbsp;&nbsp;olarak sınıflandır<br>
+3. Her tıbbi bilginin sonuna sorumluluk reddi ekle<br>
+4. Türkçe yanıt ver<br>
+5. Acil durumlarda 112'yi ara mesajı ver
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-label">Flutter Kod Referansı</div>
+  <div class="flutter-block">
+<span class="cm">// Gemini sohbet mesajı gönderme</span><br>
+<span class="kw">Future</span>&lt;<span class="cls">String</span>&gt; askGemini(<span class="cls">String</span> userMessage) <span class="kw">async</span> {<br>
+&nbsp;&nbsp;<span class="kw">final</span> systemPrompt = buildSystemPrompt(<br>
+&nbsp;&nbsp;&nbsp;&nbsp;user: currentUser,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;medicines: activeMedicines,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;compliance: weeklyCompliance,<br>
+&nbsp;&nbsp;);<br>
+&nbsp;&nbsp;<span class="kw">final</span> response = <span class="kw">await</span> gemini.generateContent([<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="cls">Content</span>.text(systemPrompt),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;..._chatHistory,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="cls">Content</span>.text(userMessage),<br>
+&nbsp;&nbsp;]);<br>
+&nbsp;&nbsp;_chatHistory.add(<span class="cls">Content</span>.text(userMessage));<br>
+&nbsp;&nbsp;_chatHistory.add(<span class="cls">Content</span>.model([<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="cls">TextPart</span>(response.text ?? <span class="str">''</span>)<br>
+&nbsp;&nbsp;]));<br>
+&nbsp;&nbsp;<span class="kw">return</span> response.text ?? <span class="str">''</span>;<br>
+}
+  </div>
+  <div class="flutter-block">
+<span class="cm">// Yanıt tipine göre renkli kart</span><br>
+<span class="cls">Widget</span> buildResponseCard(<span class="cls">GeminiResponse</span> res) {<br>
+&nbsp;&nbsp;<span class="kw">return switch</span> (res.type) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="cls">ResponseType</span>.safe => <span class="cls">SafeCard</span>(text: res.text),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="cls">ResponseType</span>.warning => <span class="cls">WarningCard</span>(text: res.text),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="cls">ResponseType</span>.info => <span class="cls">InfoCard</span>(text: res.text),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;_ => <span class="cls">PlainBubble</span>(text: res.text),<br>
+&nbsp;&nbsp;};<br>
+}
+  </div>
+</div>
+
+<div style="text-align:center; padding: 4px 0;">
+  <button onclick="sendPrompt('İstatistik ve uyum analizi ekranının tasarımını göster')" style="margin:4px; font-size:12px;">İstatistik ekranı ↗</button>
+  <button onclick="sendPrompt('Bildirim ve hatırlatıcı ekranının tasarımını göster')" style="margin:4px; font-size:12px;">Bildirim ekranı ↗</button>
+  <button onclick="sendPrompt('Aile profilleri ekranının tasarımını göster')" style="margin:4px; font-size:12px;">Aile profilleri ekranı ↗</button>
+</div>
+
+</div>
