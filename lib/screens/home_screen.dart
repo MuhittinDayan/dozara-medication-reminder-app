@@ -12,6 +12,12 @@ import 'add_medicine_screen.dart';
 import 'family_profiles_screen.dart';
 import 'medicine_detail_screen.dart';
 import 'notification_center_screen.dart';
+import '../widgets/home/calendar_strip.dart';
+import '../widgets/home/dose_card.dart';
+import '../widgets/home/home_day_summary.dart';
+import '../widgets/home/home_header.dart';
+import '../widgets/home/medicine_card.dart';
+import '../widgets/home/stock_warning_banner.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -62,14 +68,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     });
   }
 
-  String _greeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) return 'Günaydın';
-    if (hour < 17) return 'İyi günler';
-    if (hour < 21) return 'İyi akşamlar';
-    return 'İyi geceler';
-  }
-
   bool get _isSelectedDayToday {
     final now = DateTime.now();
     return now.year == _selectedDay.year &&
@@ -94,8 +92,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   double get _completionRate =>
       _selectedDayDoses.isEmpty ? 0 : _takenCount / _selectedDayDoses.length;
-
-  bool get _showLegacyHeaderSummary => false;
 
   DoseLog? get _nextDose {
     final doses = [..._selectedDayDoses]
@@ -144,37 +140,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   String get _selectedDayTitle =>
       _isSelectedDayToday ? 'Bugünkü İlaçlar' : 'Seçili Günün İlaçları';
 
-  (String, Color, Color, double, IconData) _statusMeta(DoseStatus status) {
-    return switch (status) {
-      DoseStatus.taken => (
-          'Alındı',
-          AppTheme.takenColor,
-          const Color(0xFFD1FAE5),
-          1.0,
-          Icons.check_rounded,
-        ),
-      DoseStatus.missed => (
-          'Atlandı',
-          AppTheme.missedColor,
-          const Color(0xFFFEE2E2),
-          0.15,
-          Icons.close_rounded,
-        ),
-      DoseStatus.snoozed => (
-          'Ertelendi',
-          AppTheme.snoozedColor,
-          const Color(0xFFDBEAFE),
-          0.48,
-          Icons.schedule_rounded,
-        ),
-      DoseStatus.pending => (
-          'Bekliyor',
-          AppTheme.pendingColor,
-          const Color(0xFFFEF3C7),
-          0.6,
-          Icons.priority_high_rounded,
-        ),
-    };
+  HomeDaySummary get _daySummary {
+    return HomeDaySummary(
+      takenCount: _takenCount,
+      pendingCount: _pendingCount,
+      missedCount: _missedCount,
+      completionRate: _completionRate,
+      nextDose: _nextDose,
+      totalCount: _selectedDayDoses.length,
+    );
   }
 
   @override
@@ -194,10 +168,36 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: EdgeInsets.zero,
             children: [
-              _buildHeader(isDark),
-              _buildCalendarStrip(),
+              HomeHeader(
+                activeProfile: HiveService.getActiveProfile(),
+                summary: _daySummary,
+                isDark: isDark,
+                isSelectedDayToday: _isSelectedDayToday,
+                nextMedicine: _nextDose == null ? null : HiveService.getMedicine(_nextDose!.medicineId),
+                onNotificationsTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const NotificationCenterScreen(),
+                    ),
+                  );
+                  if (mounted) {
+                    await _loadData();
+                  }
+                },
+                onProfileTap: _showProfileSwitcherSheet,
+              ),
+              CalendarStrip(
+                selectedDay: _selectedDay,
+                isDark: isDark,
+                onDaySelected: (day) {
+                  setState(() {
+                    _selectedDay = day;
+                  });
+                  _loadData();
+                },
+              ),
               _buildOverviewMetrics(isDark),
-              if (_lowStockMedicines.isNotEmpty) _buildStockWarning(),
+              StockWarningBanner(lowStockMedicines: _lowStockMedicines),
               _buildSectionTitle(
                 _selectedDayTitle,
                 icon: Icons.calendar_today_rounded,
@@ -207,7 +207,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 _buildNoDosesMessage(isDark)
               else
                 for (final dose in _selectedDayDoses)
-                  _buildDoseCard(dose, isDark),
+                  if (HiveService.getMedicine(dose.medicineId) != null)
+                    DoseCard(
+                      dose: dose,
+                      medicine: HiveService.getMedicine(dose.medicineId)!,
+                      isDark: isDark,
+                      onTake: () => _markAsTaken(dose),
+                      onSnooze: () => _snoozeDose(dose),
+                    ),
               _buildSectionDivider(isDark),
               _buildSectionTitle(
                 'Tüm İlaçlarım',
@@ -218,7 +225,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 _buildEmptyState(isDark)
               else
                 for (final medicine in _activeMedicines)
-                  _buildMedicineCard(medicine, isDark),
+                  MedicineCard(
+                    medicine: medicine,
+                    isDark: isDark,
+                    selectedDay: _selectedDay,
+                    onTap: () => _navigateToDetail(medicine),
+                  ),
               if (_upcomingAgenda.isNotEmpty) _buildAgendaSection(isDark),
               const SizedBox(height: 112),
             ],
@@ -226,553 +238,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ),
       ),
     );
-  }
-
-  Widget _buildHeader(bool isDark) {
-    final activeProfile = HiveService.getActiveProfile();
-    final activeProfileName = _profileDisplayName(activeProfile);
-    final nextDose = _nextDose;
-    final nextMedicine =
-        nextDose == null ? null : HiveService.getMedicine(nextDose.medicineId);
-    final completionPercent = (_completionRate * 100).round();
-
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppTheme.primaryColor, AppTheme.primaryLight],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Merhaba, $activeProfileName',
-                      style: GoogleFonts.nunito(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white.withValues(alpha: 0.8),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _isSelectedDayToday ? 'Bugünkü İlaçlar' : 'Seçili Gün',
-                      style: GoogleFonts.nunito(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _selectedDayDoses.isEmpty
-                          ? '${_greeting()} Bugün planlı ilaç görünmüyor.'
-                          : 'Bugün $_takenCount/${_selectedDayDoses.length} doz tamamlandı.',
-                      style: GoogleFonts.nunito(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white.withValues(alpha: 0.88),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              _buildHeaderProfiles(activeProfile),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _buildHeaderDoseHero(nextMedicine, completionPercent),
-          if (_showLegacyHeaderSummary) const SizedBox(height: 10),
-          if (_showLegacyHeaderSummary)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.14)),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Günlük Uyum',
-                          style: GoogleFonts.nunito(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white.withValues(alpha: 0.76),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '$_takenCount/${_selectedDayDoses.length}',
-                          style: GoogleFonts.nunito(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    width: 1,
-                    height: 34,
-                    color: Colors.white.withValues(alpha: 0.16),
-                  ),
-                  const SizedBox(width: 14),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        'Sıradaki',
-                        style: GoogleFonts.nunito(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white.withValues(alpha: 0.76),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _nextDoseLabel,
-                        style: GoogleFonts.nunito(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeaderDoseHero(Medicine? nextMedicine, int completionPercent) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.17),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Center(
-              child: Text(
-                nextMedicine?.formEmoji ?? '-',
-                style: const TextStyle(fontSize: 24, color: Colors.white),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Sıradaki doz',
-                  style: GoogleFonts.nunito(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white.withValues(alpha: 0.74),
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  nextMedicine?.name ?? 'Bugün doz yok',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.nunito(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(99),
-                  child: LinearProgressIndicator(
-                    value: _completionRate.clamp(0, 1).toDouble(),
-                    minHeight: 5,
-                    backgroundColor: Colors.white.withValues(alpha: 0.18),
-                    color: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                _nextDoseLabel,
-                style: GoogleFonts.nunito(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white,
-                ),
-              ),
-              Text(
-                '$completionPercent%',
-                style: GoogleFonts.nunito(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white.withValues(alpha: 0.78),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ignore: unused_element
-  Widget _buildProfileSelector(Profile activeProfile) {
-    final activeProfileName = _profileDisplayName(activeProfile);
-
-    return Row(
-      children: [
-        Expanded(
-          child: InkWell(
-            onTap: () => _showProfileSwitcherSheet(activeProfile),
-            borderRadius: BorderRadius.circular(16),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
-              ),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 16,
-                    backgroundColor: Colors.white.withValues(alpha: 0.24),
-                    child: Text(
-                      _profileAvatarLabel(activeProfile),
-                      style: GoogleFonts.nunito(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          activeProfileName,
-                          style: GoogleFonts.nunito(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                          ),
-                        ),
-                        Text(
-                          'Profil seçimi',
-                          style: GoogleFonts.nunito(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white.withValues(alpha: 0.8),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Icon(Icons.expand_more_rounded, color: Colors.white),
-                ],
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        InkWell(
-          onTap: _showAddProfileDialog,
-          borderRadius: BorderRadius.circular(14),
-          child: Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
-            ),
-            child: const Icon(Icons.add_rounded, color: Colors.white, size: 20),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildHeaderProfiles(Profile activeProfile) {
-    final profiles = HiveService.getAllProfiles();
-    final visibleProfiles = profiles.take(3).toList(growable: false);
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        GestureDetector(
-          onTap: () => _showProfileSwitcherSheet(activeProfile),
-          child: SizedBox(
-            width: 34.0 + (visibleProfiles.length - 1).clamp(0, 3) * 22,
-            height: 38,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                for (var index = 0; index < visibleProfiles.length; index++)
-                  Positioned(
-                    left: index * 22,
-                    child: _buildHeaderAvatar(
-                      visibleProfiles[index],
-                      isActive: visibleProfiles[index].id == activeProfile.id,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        _buildHeaderIconButton(
-          icon: Icons.notifications_active_rounded,
-          onTap: () async {
-            await Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => const NotificationCenterScreen(),
-              ),
-            );
-            if (mounted) {
-              await _loadData();
-            }
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildHeaderAvatar(Profile profile, {required bool isActive}) {
-    return Container(
-      width: 34,
-      height: 34,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Color(profile.colorValue),
-        border: Border.all(
-          color: isActive ? Colors.white : Colors.white.withValues(alpha: 0.42),
-          width: isActive ? 2.2 : 1.4,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        _profileAvatarLabel(profile),
-        style: GoogleFonts.nunito(
-          fontSize: 11,
-          fontWeight: FontWeight.w900,
-          color: Colors.white,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeaderIconButton({
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(999),
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.18),
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
-        ),
-        child: Icon(icon, color: Colors.white, size: 18),
-      ),
-    );
-  }
-
-  Widget _buildCalendarStrip() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final today = DateTime.now();
-    final centerDay =
-        DateTime(_selectedDay.year, _selectedDay.month, _selectedDay.day);
-    final days =
-        List.generate(7, (index) => centerDay.add(Duration(days: index - 3)));
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: isDark ? AppTheme.darkCard : Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-            color: isDark ? AppTheme.darkBorder : AppTheme.borderColor),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primaryColor.withValues(alpha: 0.08),
-            blurRadius: 22,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          for (var index = 0; index < days.length; index++) ...[
-            Expanded(
-              child: _buildCalendarDayCard(
-                day: days[index],
-                today: today,
-                isDark: isDark,
-              ),
-            ),
-            if (index < days.length - 1) const SizedBox(width: 6),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCalendarDayCard({
-    required DateTime day,
-    required DateTime today,
-    required bool isDark,
-  }) {
-    final isToday = day.day == today.day &&
-        day.month == today.month &&
-        day.year == today.year;
-    final isSelected = day.year == _selectedDay.year &&
-        day.month == _selectedDay.month &&
-        day.day == _selectedDay.day;
-
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedDay = day;
-        });
-        _loadData();
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        height: 66,
-        decoration: BoxDecoration(
-          gradient: isSelected
-              ? const LinearGradient(
-                  colors: [AppTheme.primaryColor, AppTheme.primaryLight],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                )
-              : null,
-          color: isSelected
-              ? null
-              : (isDark ? AppTheme.darkSurface : AppTheme.backgroundSecondary),
-          borderRadius: BorderRadius.circular(14),
-          border: isToday && !isSelected
-              ? Border.all(color: AppTheme.primaryLight, width: 1.2)
-              : null,
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: AppTheme.primaryColor.withValues(alpha: 0.24),
-                    blurRadius: 16,
-                    offset: const Offset(0, 7),
-                  ),
-                ]
-              : null,
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              _calendarWeekdayLabel(day.weekday),
-              style: GoogleFonts.nunito(
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                color: isSelected
-                    ? Colors.white.withValues(alpha: 0.86)
-                    : (isDark
-                        ? const Color(0xFFC4B7E9)
-                        : AppTheme.textSecondary),
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              '${day.day}',
-              style: GoogleFonts.nunito(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: isSelected
-                    ? Colors.white
-                    : (isDark ? Colors.white : AppTheme.textPrimary),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _calendarWeekdayLabel(int weekday) {
-    switch (weekday) {
-      case DateTime.monday:
-        return 'PZT';
-      case DateTime.tuesday:
-        return 'SAL';
-      case DateTime.wednesday:
-        return 'ÇAR';
-      case DateTime.thursday:
-        return 'PER';
-      case DateTime.friday:
-        return 'CUM';
-      case DateTime.saturday:
-        return 'CMT';
-      case DateTime.sunday:
-        return 'PAZ';
-      default:
-        return '';
-    }
   }
 
   Widget _buildOverviewMetrics(bool isDark) {
@@ -1203,38 +668,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildStockWarning() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFEF3C7),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFFCD34D)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.warning_amber_rounded, color: AppTheme.warningColor),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              _lowStockMedicines
-                  .map((medicine) =>
-                      '${medicine.name} (${medicine.stockCount} adet)')
-                  .join(', '),
-              style: GoogleFonts.nunito(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFF92400E),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildSectionTitle(
     String title, {
     IconData? icon,
@@ -1382,321 +815,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildDoseCard(DoseLog dose, bool isDark) {
-    final medicine = HiveService.getMedicine(dose.medicineId);
-    if (medicine == null) {
-      return const SizedBox.shrink();
-    }
-
-    final status = _statusMeta(dose.status);
-    final medColor = Color(medicine.colorValue);
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
-      decoration: BoxDecoration(
-        color: isDark ? AppTheme.darkCard : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: status.$2.withValues(alpha: 0.45),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: status.$2.withValues(alpha: isDark ? 0.12 : 0.08),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: medColor.withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Center(
-                    child: Text(
-                      medicine.formEmoji,
-                      style: const TextStyle(fontSize: 20),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        medicine.name,
-                        style: GoogleFonts.nunito(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${DateFormat('HH:mm').format(dose.scheduledTime)} · ${medicine.formName}',
-                        style: GoogleFonts.nunito(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: isDark
-                              ? const Color(0xFFC4B7E9)
-                              : AppTheme.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  width: 22,
-                  height: 22,
-                  decoration: BoxDecoration(
-                    color: status.$3,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: status.$2.withValues(alpha: 0.45),
-                    ),
-                  ),
-                  child: Icon(status.$5, size: 12, color: status.$2),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(99),
-              child: LinearProgressIndicator(
-                value: status.$4,
-                minHeight: 4,
-                backgroundColor:
-                    isDark ? AppTheme.darkSurface : AppTheme.accentColor,
-                color: status.$2,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: status.$3,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    status.$1,
-                    style: GoogleFonts.nunito(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: status.$2,
-                    ),
-                  ),
-                ),
-                const Spacer(),
-                if (dose.status == DoseStatus.pending ||
-                    dose.status == DoseStatus.snoozed) ...[
-                  FilledButton(
-                    onPressed: () => _markAsTaken(dose),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppTheme.primaryColor,
-                      minimumSize: const Size(0, 34),
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                    ),
-                    child: Text(
-                      'Aldım',
-                      style: GoogleFonts.nunito(fontWeight: FontWeight.w800),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  OutlinedButton(
-                    onPressed: () => _snoozeDose(dose),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.primaryColor,
-                      minimumSize: const Size(0, 34),
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                    ),
-                    child: Text(
-                      'Ertele',
-                      style: GoogleFonts.nunito(fontSize: 11),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMedicineCard(Medicine medicine, bool isDark) {
-    final medColor = Color(medicine.colorValue);
-    final selectedDayDoses =
-        HiveService.getDoseLogsForMedicineOnDate(medicine.id, _selectedDay);
-    final takenCount = selectedDayDoses
-        .where((dose) => dose.status == DoseStatus.taken)
-        .length;
-    final totalCount = selectedDayDoses.isEmpty
-        ? medicine.remindersPerDay
-        : selectedDayDoses.length;
-    final progress = totalCount == 0 ? 0.0 : takenCount / totalCount;
-    final hasMissed =
-        selectedDayDoses.any((dose) => dose.status == DoseStatus.missed);
-    final hasPending = selectedDayDoses.any(
-      (dose) =>
-          dose.status == DoseStatus.pending ||
-          dose.status == DoseStatus.snoozed,
-    );
-    final statusColor = hasMissed
-        ? AppTheme.missedColor
-        : progress >= 1
-            ? AppTheme.takenColor
-            : hasPending
-                ? AppTheme.pendingColor
-                : medColor;
-    final statusBackground = hasMissed
-        ? const Color(0xFFFEE2E2)
-        : progress >= 1
-            ? const Color(0xFFD1FAE5)
-            : hasPending
-                ? const Color(0xFFFEF3C7)
-                : medColor.withValues(alpha: 0.12);
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
-      decoration: BoxDecoration(
-        color: isDark ? AppTheme.darkCard : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: hasMissed || hasPending
-              ? statusColor.withValues(alpha: 0.45)
-              : (isDark ? AppTheme.darkBorder : AppTheme.borderColor),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: statusColor.withValues(alpha: isDark ? 0.12 : 0.08),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: InkWell(
-        onTap: () => _navigateToDetail(medicine),
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: medColor.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: Text(
-                    medicine.formEmoji,
-                    style: const TextStyle(fontSize: 20),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      medicine.name,
-                      style: GoogleFonts.nunito(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${medicine.scheduleDescription} · $takenCount/${medicine.remindersPerDay} alındı',
-                      style: GoogleFonts.nunito(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: isDark
-                            ? const Color(0xFFC4B7E9)
-                            : AppTheme.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(99),
-                      child: LinearProgressIndicator(
-                        value: progress.clamp(0, 1).toDouble(),
-                        minHeight: 4,
-                        backgroundColor: isDark
-                            ? AppTheme.darkSurface
-                            : AppTheme.accentColor,
-                        color: statusColor,
-                      ),
-                    ),
-                    if (medicine.lowStockThreshold != null) ...[
-                      const SizedBox(height: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: medicine.isStockLow
-                              ? const Color(0xFFFEF3C7)
-                              : const Color(0xFFD1FAE5),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          'Stok: ${medicine.stockCount} adet',
-                          style: GoogleFonts.nunito(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                            color: medicine.isStockLow
-                                ? const Color(0xFF92400E)
-                                : const Color(0xFF065F46),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                decoration: BoxDecoration(
-                  color: statusBackground,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  progress >= 1
-                      ? 'Tamam'
-                      : hasMissed
-                          ? 'Atlandı'
-                          : hasPending
-                              ? 'Bekliyor'
-                              : 'Plan',
-                  style: GoogleFonts.nunito(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w900,
-                    color: statusColor,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
