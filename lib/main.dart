@@ -394,10 +394,11 @@ class IlacHatirlaticiAppState extends State<IlacHatirlaticiApp>
                               borderRadius: BorderRadius.circular(28),
                               child: Padding(
                                 padding: const EdgeInsets.all(24),
-                                child:
-                                    _isInitializingSecurity || snapshot == null
-                                        ? _buildLoadingState()
-                                        : _buildUnlockState(snapshot),
+                                child: _isInitializingSecurity || snapshot == null
+                                    ? _buildLoadingState()
+                                    : (_isLocked
+                                        ? _buildUnlockState(snapshot)
+                                        : const SizedBox.shrink()),
                               ),
                             ),
                           ),
@@ -536,12 +537,16 @@ class IlacHatirlaticiAppState extends State<IlacHatirlaticiApp>
 
   @override
   Widget build(BuildContext context) {
+    final hasPin = _securitySnapshot?.hasPin ?? false;
     final shouldShowLockScreen = widget.requireAuthentication &&
         !_isInitializingSecurity &&
         _isLocked &&
-        (_securitySnapshot?.hasPin ?? false);
+        hasPin;
+    
+    final obscureBackground = _isBackground && hasPin;
+    
     final shouldShowSecurityOverlay =
-        _isBackground || _isInitializingSecurity || shouldShowLockScreen;
+        obscureBackground || _isInitializingSecurity || shouldShowLockScreen;
 
     return BlocProvider(
       create: (_) => ProfileCubit()..hydrate(),
