@@ -635,6 +635,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
             ),
+            _buildSettingsSectionTitle('Geliştirici Araçları'),
+            _buildContentPadding(
+              child: _buildSectionCard(
+                isDark: isDark,
+                children: [
+                  _buildActionTile(
+                    icon: Icons.science_rounded,
+                    title: 'Örnek Veri Yükle',
+                    subtitle: 'Sahte ilaç ve doz verisi ekler (Test için).',
+                    isDark: isDark,
+                    enabled: true,
+                    onTap: _loadDummyData,
+                  ),
+                  _buildDivider(isDark),
+                  _buildActionTile(
+                    icon: Icons.notifications_active_rounded,
+                    title: 'Test Bildirimi Gönder',
+                    subtitle: 'Anlık bir test bildirimi oluşturur.',
+                    isDark: isDark,
+                    enabled: true,
+                    onTap: _sendTestNotification,
+                  ),
+                ],
+              ),
+            ),
             _buildSettingsSectionTitle('Hakkında'),
             _buildContentPadding(
               child: _buildSectionCard(
@@ -653,6 +678,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _loadDummyData() async {
+    try {
+      await HiveService.injectDummyData();
+      if (mounted) {
+        _showSnackBar('Örnek veriler başarıyla yüklendi. 2 dakika sonraya bildirim ayarlandı.');
+      }
+    } catch (e) {
+      if (mounted) _showSnackBar('Hata: $e', backgroundColor: AppTheme.errorColor);
+    }
+  }
+
+  Future<void> _sendTestNotification() async {
+    try {
+      await NotificationService.showTestNotification();
+      if (mounted) _showSnackBar('Test bildirimi gönderildi.');
+    } catch (e) {
+      if (mounted) _showSnackBar('Bildirim hatası: $e', backgroundColor: AppTheme.errorColor);
+    }
   }
 
   Widget _buildBackendSection(bool isDark) {

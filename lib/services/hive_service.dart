@@ -910,4 +910,56 @@ class HiveService {
     _ensureInitialized();
     return _doseLogBox.get(id);
   }
+
+  static Future<void> injectDummyData() async {
+    _ensureInitialized();
+    final profileId = activeProfileId.value;
+
+    final dummyMedicine = Medicine(
+      id: _uuid.v4(),
+      profileId: profileId,
+      name: 'Örnek İlaç (Parol)',
+      form: MedicineForm.pill,
+      dosage: '500mg',
+      dailyFrequency: 3,
+      totalDays: 7,
+      startDate: DateTime.now(),
+      firstDoseTime: '08:00',
+      reminderTimes: ['08:00', '14:00', '20:00'],
+      withFood: true,
+      note: 'Ağrı kesici',
+      scheduleType: MedicineScheduleType.daily,
+      stockCount: 20,
+      lowStockThreshold: 5,
+    );
+
+    await addMedicine(dummyMedicine);
+
+    final now = DateTime.now();
+    final testTime = now.add(const Duration(minutes: 2));
+    final hhmm = '${testTime.hour.toString().padLeft(2, '0')}:${testTime.minute.toString().padLeft(2, '0')}';
+
+    final testMedicine = Medicine(
+      id: _uuid.v4(),
+      profileId: profileId,
+      name: 'Test Bildirim İlacı',
+      form: MedicineForm.pill,
+      dosage: '1 Kapsül',
+      dailyFrequency: 1,
+      totalDays: 1,
+      startDate: now,
+      firstDoseTime: hhmm,
+      reminderTimes: [hhmm],
+      withFood: false,
+      note: 'Bu ilaç 2 dakika sonra bildirim gönderecek.',
+      scheduleType: MedicineScheduleType.daily,
+      stockCount: 10,
+    );
+
+    await addMedicine(testMedicine);
+    await syncDoseLogs();
+    
+    await NotificationService.rescheduleAllNotifications();
+    await _notifyLocalDataChanged();
+  }
 }
