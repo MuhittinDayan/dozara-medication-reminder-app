@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-
-import 'package:flutter_animate/flutter_animate.dart';
 
 import '../../models/dose_log.dart';
 import '../../models/medicine.dart';
@@ -30,14 +29,6 @@ class DoseCard extends StatefulWidget {
 
 class _DoseCardState extends State<DoseCard> {
   bool _isTaking = false;
-
-  void _handleTake() async {
-    setState(() => _isTaking = true);
-    await Future.delayed(500.ms);
-    if (mounted) {
-      widget.onTake();
-    }
-  }
 
   (String, Color, Color, double, IconData) _statusMeta(DoseStatus status) {
     return switch (status) {
@@ -72,22 +63,37 @@ class _DoseCardState extends State<DoseCard> {
     };
   }
 
+  Future<void> _handleTake() async {
+    if (_isTaking) return;
+    setState(() => _isTaking = true);
+    await Future.delayed(const Duration(milliseconds: 600));
+    widget.onTake();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final status = _statusMeta(_isTaking ? DoseStatus.taken : widget.dose.status);
+    final status = _statusMeta(
+      _isTaking ? DoseStatus.taken : widget.dose.status,
+    );
     final medColor = Color(widget.medicine.colorValue);
 
-    Widget card = Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeInOut,
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
       decoration: BoxDecoration(
-        color: widget.isDark ? AppTheme.darkCard : Colors.white,
+        color: _isTaking
+            ? AppTheme.takenColor.withValues(alpha: isDark ? 0.18 : 0.08)
+            : (widget.isDark ? AppTheme.darkCard : Colors.white),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: status.$2.withValues(alpha: 0.45),
         ),
         boxShadow: [
           BoxShadow(
-            color: status.$2.withValues(alpha: widget.isDark ? 0.12 : 0.08),
+            color: status.$2.withValues(
+              alpha: widget.isDark ? 0.12 : 0.08,
+            ),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -99,18 +105,34 @@ class _DoseCardState extends State<DoseCard> {
           children: [
             Row(
               children: [
-                Container(
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: medColor.withValues(alpha: 0.14),
+                    color: _isTaking
+                        ? AppTheme.takenColor.withValues(alpha: 0.2)
+                        : medColor.withValues(alpha: 0.14),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Center(
-                    child: Text(
-                      widget.medicine.formEmoji,
-                      style: const TextStyle(fontSize: 20),
-                    ),
+                    child: _isTaking
+                        ? const Icon(
+                            Icons.check_rounded,
+                            color: AppTheme.takenColor,
+                            size: 22,
+                          )
+                            .animate()
+                            .scale(
+                              begin: const Offset(0, 0),
+                              end: const Offset(1, 1),
+                              duration: 300.ms,
+                              curve: Curves.elasticOut,
+                            )
+                        : Text(
+                            widget.medicine.formEmoji,
+                            style: const TextStyle(fontSize: 20),
+                          ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -139,55 +161,71 @@ class _DoseCardState extends State<DoseCard> {
                     ],
                   ),
                 ),
-                Container(
-                  width: 22,
-                  height: 22,
-                  decoration: BoxDecoration(
-                    color: status.$3,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: status.$2.withValues(alpha: 0.45),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: Container(
+                    key: ValueKey(status.$1),
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      color: status.$3,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: status.$2.withValues(alpha: 0.45),
+                      ),
                     ),
+                    child: Icon(status.$5, size: 12, color: status.$2),
                   ),
-                  child: Icon(status.$5, size: 12, color: status.$2),
                 ),
               ],
             ),
             const SizedBox(height: 10),
             ClipRRect(
               borderRadius: BorderRadius.circular(99),
-              child: LinearProgressIndicator(
-                value: status.$4,
-                minHeight: 4,
-                backgroundColor:
-                    widget.isDark ? AppTheme.darkSurface : AppTheme.accentColor,
-                color: status.$2,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 400),
+                height: 4,
+                child: LinearProgressIndicator(
+                  value: status.$4,
+                  minHeight: 4,
+                  backgroundColor: widget.isDark
+                      ? AppTheme.darkSurface
+                      : AppTheme.accentColor,
+                  color: status.$2,
+                ),
               ),
             ),
             const SizedBox(height: 8),
             Row(
               children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: status.$3,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    status.$1,
-                    style: GoogleFonts.nunito(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: status.$2,
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 250),
+                  child: Container(
+                    key: ValueKey(status.$1),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: status.$3,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      status.$1,
+                      style: GoogleFonts.nunito(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: status.$2,
+                      ),
                     ),
                   ),
                 ),
                 const Spacer(),
-                if (widget.dose.status == DoseStatus.pending ||
-                    widget.dose.status == DoseStatus.snoozed) ...[
+                if (!_isTaking &&
+                    (widget.dose.status == DoseStatus.pending ||
+                        widget.dose.status == DoseStatus.snoozed)) ...[
                   FilledButton(
-                    onPressed: _isTaking ? null : _handleTake,
+                    onPressed: _handleTake,
                     style: FilledButton.styleFrom(
                       backgroundColor: AppTheme.primaryColor,
                       minimumSize: const Size(0, 34),
@@ -200,7 +238,7 @@ class _DoseCardState extends State<DoseCard> {
                   ),
                   const SizedBox(width: 8),
                   OutlinedButton(
-                    onPressed: _isTaking ? null : widget.onSnooze,
+                    onPressed: widget.onSnooze,
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppTheme.primaryColor,
                       minimumSize: const Size(0, 34),
@@ -217,15 +255,13 @@ class _DoseCardState extends State<DoseCard> {
           ],
         ),
       ),
-    );
-
-    if (_isTaking) {
-      card = card.animate()
-          .shimmer(duration: 300.ms, color: AppTheme.takenColor.withValues(alpha: 0.3))
-          .scaleXY(end: 0.8, duration: 500.ms, curve: Curves.easeIn)
-          .fadeOut(duration: 500.ms);
-    }
-
-    return card;
+    ).animate().fadeIn(duration: 300.ms).slideY(
+          begin: 0.04,
+          end: 0,
+          duration: 300.ms,
+          curve: Curves.easeOut,
+        );
   }
+
+  bool get isDark => widget.isDark;
 }
