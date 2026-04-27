@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
+import 'package:flutter_animate/flutter_animate.dart';
+
 import '../../models/dose_log.dart';
 import '../../models/medicine.dart';
 import '../../theme/app_theme.dart';
 
-class DoseCard extends StatelessWidget {
+class DoseCard extends StatefulWidget {
   final DoseLog dose;
   final Medicine medicine;
   final bool isDark;
@@ -21,6 +23,21 @@ class DoseCard extends StatelessWidget {
     required this.onTake,
     required this.onSnooze,
   });
+
+  @override
+  State<DoseCard> createState() => _DoseCardState();
+}
+
+class _DoseCardState extends State<DoseCard> {
+  bool _isTaking = false;
+
+  void _handleTake() async {
+    setState(() => _isTaking = true);
+    await Future.delayed(500.ms);
+    if (mounted) {
+      widget.onTake();
+    }
+  }
 
   (String, Color, Color, double, IconData) _statusMeta(DoseStatus status) {
     return switch (status) {
@@ -57,20 +74,20 @@ class DoseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final status = _statusMeta(dose.status);
-    final medColor = Color(medicine.colorValue);
+    final status = _statusMeta(_isTaking ? DoseStatus.taken : widget.dose.status);
+    final medColor = Color(widget.medicine.colorValue);
 
-    return Container(
+    Widget card = Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
       decoration: BoxDecoration(
-        color: isDark ? AppTheme.darkCard : Colors.white,
+        color: widget.isDark ? AppTheme.darkCard : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: status.$2.withValues(alpha: 0.45),
         ),
         boxShadow: [
           BoxShadow(
-            color: status.$2.withValues(alpha: isDark ? 0.12 : 0.08),
+            color: status.$2.withValues(alpha: widget.isDark ? 0.12 : 0.08),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -91,7 +108,7 @@ class DoseCard extends StatelessWidget {
                   ),
                   child: Center(
                     child: Text(
-                      medicine.formEmoji,
+                      widget.medicine.formEmoji,
                       style: const TextStyle(fontSize: 20),
                     ),
                   ),
@@ -102,7 +119,7 @@ class DoseCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        medicine.name,
+                        widget.medicine.name,
                         style: GoogleFonts.nunito(
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
@@ -110,11 +127,11 @@ class DoseCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '${DateFormat('HH:mm').format(dose.scheduledTime)} · ${medicine.formName}',
+                        '${DateFormat('HH:mm').format(widget.dose.scheduledTime)} · ${widget.medicine.formName}',
                         style: GoogleFonts.nunito(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: isDark
+                          color: widget.isDark
                               ? const Color(0xFFC4B7E9)
                               : AppTheme.textSecondary,
                         ),
@@ -143,7 +160,7 @@ class DoseCard extends StatelessWidget {
                 value: status.$4,
                 minHeight: 4,
                 backgroundColor:
-                    isDark ? AppTheme.darkSurface : AppTheme.accentColor,
+                    widget.isDark ? AppTheme.darkSurface : AppTheme.accentColor,
                 color: status.$2,
               ),
             ),
@@ -167,10 +184,10 @@ class DoseCard extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
-                if (dose.status == DoseStatus.pending ||
-                    dose.status == DoseStatus.snoozed) ...[
+                if (widget.dose.status == DoseStatus.pending ||
+                    widget.dose.status == DoseStatus.snoozed) ...[
                   FilledButton(
-                    onPressed: onTake,
+                    onPressed: _isTaking ? null : _handleTake,
                     style: FilledButton.styleFrom(
                       backgroundColor: AppTheme.primaryColor,
                       minimumSize: const Size(0, 34),
@@ -183,7 +200,7 @@ class DoseCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                   OutlinedButton(
-                    onPressed: onSnooze,
+                    onPressed: _isTaking ? null : widget.onSnooze,
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppTheme.primaryColor,
                       minimumSize: const Size(0, 34),
@@ -201,5 +218,14 @@ class DoseCard extends StatelessWidget {
         ),
       ),
     );
+
+    if (_isTaking) {
+      card = card.animate()
+          .shimmer(duration: 300.ms, color: AppTheme.takenColor.withValues(alpha: 0.3))
+          .scaleXY(end: 0.8, duration: 500.ms, curve: Curves.easeIn)
+          .fadeOut(duration: 500.ms);
+    }
+
+    return card;
   }
 }
