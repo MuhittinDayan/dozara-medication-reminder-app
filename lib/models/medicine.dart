@@ -59,6 +59,7 @@ class Medicine extends HiveObject {
   int? stockCount;
 
   @HiveField(7)
+  @Deprecated('lowStockThreshold kullan')
   final int stockWarningThreshold;
 
   @HiveField(8)
@@ -105,7 +106,7 @@ class Medicine extends HiveObject {
     required this.firstDoseTime,
     required this.startDate,
     this.stockCount,
-    this.stockWarningThreshold = 5,
+    @Deprecated('lowStockThreshold kullan') this.stockWarningThreshold = 5,
     this.isActive = true,
     this.colorValue = 0xFF2E7D32,
     this.form = MedicineForm.pill,

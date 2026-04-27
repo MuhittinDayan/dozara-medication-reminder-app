@@ -77,49 +77,39 @@ class HeatmapCard extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: SizedBox(
-              width: 140,
-              child: GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: data.length,
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: crossAxisCount,
-                  crossAxisSpacing: 3,
-                  mainAxisSpacing: 3,
-                  childAspectRatio: 1,
-                ),
-                itemBuilder: (context, index) {
-                  final item = data[index];
-                  return Center(
-                    child: InkWell(
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              '${_dateLabel(item.date)}: %${item.rate}',
-                              style: GoogleFonts.nunito(),
-                            ),
-                            backgroundColor: AppTheme.primaryColor,
-                          ),
-                        );
-                      },
-                      borderRadius: BorderRadius.circular(3),
-                      child: Container(
-                        width: 14,
-                        height: 14,
-                        decoration: BoxDecoration(
-                          color: _heatmapColor(item.rate, isDark),
-                          borderRadius: BorderRadius.circular(3),
-                        ),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: data.length,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              crossAxisSpacing: 4,
+              mainAxisSpacing: 4,
+              childAspectRatio: 1,
+            ),
+            itemBuilder: (context, index) {
+              final item = data[index];
+              return InkWell(
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        '${_dateLabel(item.date)}: %${item.rate}',
+                        style: GoogleFonts.nunito(),
                       ),
+                      backgroundColor: AppTheme.primaryColor,
                     ),
                   );
                 },
-              ),
-            ),
+                borderRadius: BorderRadius.circular(4),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: _heatmapColor(item.rate, isDark),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 10),
           Row(
