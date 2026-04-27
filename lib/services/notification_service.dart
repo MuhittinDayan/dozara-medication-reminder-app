@@ -120,7 +120,7 @@ class NotificationService {
     await _notifications.zonedSchedule(
       missedId,
       '${medicine.name} dozu onay bekliyor',
-      'Ilacinizi hala almadinizsa kontrol edin.',
+      'İlacınızı hâlâ almadıysanız kontrol edin.',
       tzScheduled.add(const Duration(minutes: 30)),
       _notificationDetails(isWarning: true),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
@@ -131,14 +131,14 @@ class NotificationService {
   }
 
   static String _doseReminderBody(Medicine medicine) {
-    final parts = <String>['Ilac alma zamani geldi'];
+    final parts = <String>['İlaç alma zamanı geldi'];
 
     if (medicine.dosage != null && medicine.dosage!.trim().isNotEmpty) {
       parts.add('Doz: ${medicine.dosage!.trim()}');
     }
 
     if (medicine.withFood) {
-      parts.add('Tok karnina');
+      parts.add('Tok karnına');
     }
 
     return parts.join(' • ');
@@ -182,8 +182,8 @@ class NotificationService {
   static Future<void> showLowStockWarning(Medicine medicine) async {
     await _notifications.show(
       medicine.id.hashCode,
-      'Stok Uyarisi: ${medicine.name}',
-      'Sadece ${medicine.stockCount} adet ${medicine.formName} kaldi.',
+      'Stok Uyarısı: ${medicine.name}',
+      'Sadece ${medicine.stockCount} adet ${medicine.formName} kaldı.',
       _notificationDetails(isWarning: true),
     );
   }
@@ -194,7 +194,7 @@ class NotificationService {
   }) async {
     await _notifications.show(
       profileName.hashCode.abs() % 1000000000,
-      '$profileName icin ilac hatirlatmasi',
+      '$profileName için ilaç hatırlatması',
       message,
       _notificationDetails(isWarning: true),
     );
@@ -212,14 +212,14 @@ class NotificationService {
 
     await _notifications.zonedSchedule(
       999999,
-      'Gunluk Ozet',
-      'Bugunku ilac durumunuzu gormek icin dokunun.',
+      'Günlük Özet',
+      'Bugünkü ilaç durumunuzu görmek için dokunun.',
       tzDate,
       const NotificationDetails(
         android: AndroidNotificationDetails(
           'daily_summary',
-          'Gunluk Ozetler',
-          channelDescription: 'Her aksam gelen ilac ozeti',
+          'Günlük Özetler',
+          channelDescription: 'Her akşam gelen ilaç özeti',
           importance: Importance.low,
           priority: Priority.low,
         ),
@@ -266,8 +266,8 @@ class NotificationService {
     return NotificationDetails(
       android: AndroidNotificationDetails(
         isWarning ? 'warning_channel' : 'ilac_hatirlatici_channel',
-        isWarning ? 'Uyarilar' : 'Ilac Hatirlatici',
-        channelDescription: 'Ilac alma zamani ve stok bildirimleri',
+        isWarning ? 'Uyarılar' : 'İlaç Hatırlatıcı',
+        channelDescription: 'İlaç alma zamanı ve stok bildirimleri',
         importance: Importance.high,
         priority: Priority.high,
         showWhen: true,
@@ -282,7 +282,7 @@ class NotificationService {
             : const <AndroidNotificationAction>[
                 AndroidNotificationAction(
                   'taken',
-                  'Aldim',
+                  'Aldım',
                   showsUserInterface: true,
                 ),
                 AndroidNotificationAction(
@@ -309,7 +309,7 @@ class NotificationService {
     await _notifications.show(
       0,
       'Test Bildirimi',
-      'Ilac hatirlatici bildirimleri calisiyor.',
+      'İlaç hatırlatıcı bildirimleri çalışıyor.',
       _notificationDetails(),
     );
   }
