@@ -99,93 +99,20 @@ class HiveService {
   }
 
   /// Hive kutularını aç
-  static Future<void> init({
-    required List<int> encryptionKey,
-    bool migrateFromUnencrypted = false,
-  }) async {
+  static Future<void> init() async {
     if (_isInitialized) {
       return;
     }
 
     registerAdapters();
 
-    if (migrateFromUnencrypted) {
-      await _migrateToEncryptedBoxes(encryptionKey);
-    }
-
-    final cipher = HiveAesCipher(encryptionKey);
-
-    _medicineBox = await Hive.openBox<Medicine>(
-      _medicineBoxName,
-      encryptionCipher: cipher,
-    );
-    _doseLogBox = await Hive.openBox<DoseLog>(
-      _doseLogBoxName,
-      encryptionCipher: cipher,
-    );
-    _profileBox = await Hive.openBox<Profile>(
-      _profileBoxName,
-      encryptionCipher: cipher,
-    );
-    _settingsBox = await Hive.openBox(
-      _settingsBoxName,
-      encryptionCipher: cipher,
-    );
+    _medicineBox = await Hive.openBox<Medicine>(_medicineBoxName);
+    _doseLogBox = await Hive.openBox<DoseLog>(_doseLogBoxName);
+    _profileBox = await Hive.openBox<Profile>(_profileBoxName);
+    _settingsBox = await Hive.openBox(_settingsBoxName);
 
     await _ensureProfileState();
     _isInitialized = true;
-  }
-
-  static Future<void> _migrateToEncryptedBoxes(List<int> encryptionKey) async {
-    final medicinesBox = await Hive.openBox<Medicine>(_medicineBoxName);
-    final medicines = medicinesBox.toMap().cast<dynamic, Medicine>();
-    await medicinesBox.deleteFromDisk();
-
-    final doseLogsBox = await Hive.openBox<DoseLog>(_doseLogBoxName);
-    final doseLogs = doseLogsBox.toMap().cast<dynamic, DoseLog>();
-    await doseLogsBox.deleteFromDisk();
-
-    final profilesBox = await Hive.openBox<Profile>(_profileBoxName);
-    final profiles = profilesBox.toMap().cast<dynamic, Profile>();
-    await profilesBox.deleteFromDisk();
-
-    final settingsBox = await Hive.openBox(_settingsBoxName);
-    final settings = settingsBox.toMap();
-    await settingsBox.deleteFromDisk();
-
-    if (medicines.isNotEmpty ||
-        doseLogs.isNotEmpty ||
-        profiles.isNotEmpty ||
-        settings.isNotEmpty) {
-      final cipher = HiveAesCipher(encryptionKey);
-      final encryptedMedicineBox = await Hive.openBox<Medicine>(
-        _medicineBoxName,
-        encryptionCipher: cipher,
-      );
-      await encryptedMedicineBox.putAll(medicines);
-      await encryptedMedicineBox.close();
-
-      final encryptedDoseLogsBox = await Hive.openBox<DoseLog>(
-        _doseLogBoxName,
-        encryptionCipher: cipher,
-      );
-      await encryptedDoseLogsBox.putAll(doseLogs);
-      await encryptedDoseLogsBox.close();
-
-      final encryptedProfilesBox = await Hive.openBox<Profile>(
-        _profileBoxName,
-        encryptionCipher: cipher,
-      );
-      await encryptedProfilesBox.putAll(profiles);
-      await encryptedProfilesBox.close();
-
-      final encryptedSettingsBox = await Hive.openBox(
-        _settingsBoxName,
-        encryptionCipher: cipher,
-      );
-      await encryptedSettingsBox.putAll(settings);
-      await encryptedSettingsBox.close();
-    }
   }
 
   static Future<void> close() async {

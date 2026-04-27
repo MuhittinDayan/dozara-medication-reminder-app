@@ -10,7 +10,6 @@ import 'package:ilac_hatirlatici/models/profile.dart';
 import 'package:ilac_hatirlatici/screens/main_screen.dart';
 import 'package:ilac_hatirlatici/screens/onboarding_screen.dart';
 import 'package:ilac_hatirlatici/services/hive_service.dart';
-import 'package:ilac_hatirlatici/services/security_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -21,19 +20,13 @@ void main() {
     await initializeDateFormatting('tr_TR', null);
     tempDir = await Directory.systemTemp.createTemp('ilac_hatirlatici_widget');
     Hive.init(tempDir.path);
-    SecurityService.enableInMemoryFallbackForTests();
-    await SecurityService.init();
     HiveService.registerAdapters();
-    await HiveService.init(
-      encryptionKey: await SecurityService.getOrCreateEncryptionKey(),
-      migrateFromUnencrypted: false,
-    );
+    await HiveService.init();
   });
 
   tearDownAll(() async {
     await HiveService.close();
     await Hive.deleteFromDisk();
-    SecurityService.resetTestState();
     if (await tempDir.exists()) {
       await tempDir.delete(recursive: true);
     }
@@ -42,7 +35,6 @@ void main() {
   testWidgets('App loads smoke test', (WidgetTester tester) async {
     await tester.pumpWidget(
       const IlacHatirlaticiApp(
-        requireAuthentication: false,
         showOnboarding: false,
       ),
     );
@@ -55,24 +47,12 @@ void main() {
     expect(find.byIcon(Icons.add_rounded), findsWidgets);
   });
 
-  testWidgets('App opens without lock when no PIN is configured',
-      (WidgetTester tester) async {
-    await SecurityService.removePin();
 
-    await tester.pumpWidget(
-      const IlacHatirlaticiApp(showOnboarding: false),
-    );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
-
-    expect(find.byType(MainScreen), findsOneWidget);
-    expect(find.text('Uygulama Kilitli'), findsNothing);
-  });
 
   testWidgets('Onboarding appears when it is not completed',
       (WidgetTester tester) async {
     await tester.pumpWidget(
-      const IlacHatirlaticiApp(requireAuthentication: false),
+      const IlacHatirlaticiApp(),
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
@@ -100,7 +80,6 @@ void main() {
 
     await tester.pumpWidget(
       const IlacHatirlaticiApp(
-        requireAuthentication: false,
         showOnboarding: false,
       ),
     );

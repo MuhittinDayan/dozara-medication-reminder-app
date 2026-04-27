@@ -5,7 +5,6 @@ import 'package:hive/hive.dart';
 
 import 'package:ilac_hatirlatici/models/medicine.dart';
 import 'package:ilac_hatirlatici/services/hive_service.dart';
-import 'package:ilac_hatirlatici/services/security_service.dart';
 
 void main() {
   late Directory tempDir;
@@ -13,19 +12,13 @@ void main() {
   setUp(() async {
     tempDir = await Directory.systemTemp.createTemp('ilac_hatirlatici_hive');
     Hive.init(tempDir.path);
-    SecurityService.enableInMemoryFallbackForTests();
-    await SecurityService.init();
     HiveService.registerAdapters();
-    await HiveService.init(
-      encryptionKey: await SecurityService.getOrCreateEncryptionKey(),
-      migrateFromUnencrypted: false,
-    );
+    await HiveService.init();
   });
 
   tearDown(() async {
     await HiveService.close();
     await Hive.deleteFromDisk();
-    SecurityService.resetTestState();
     if (await tempDir.exists()) {
       await tempDir.delete(recursive: true);
     }
@@ -80,16 +73,4 @@ void main() {
     expect(HiveService.isOnboardingCompleted(), isFalse);
   });
 
-  test('removePin clears app lock settings', () async {
-    await SecurityService.setPin('1234');
-    await SecurityService.setBiometricsEnabled(true);
-    await SecurityService.setLockOnResume(true);
-
-    await SecurityService.removePin();
-
-    final snapshot = await SecurityService.getSnapshot();
-    expect(snapshot.hasPin, isFalse);
-    expect(snapshot.biometricsEnabled, isFalse);
-    expect(snapshot.lockOnResume, isFalse);
-  });
 }

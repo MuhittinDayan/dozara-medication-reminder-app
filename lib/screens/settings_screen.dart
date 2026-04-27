@@ -10,9 +10,7 @@ import '../data/sync/sync_service.dart';
 import '../main.dart';
 import '../services/hive_service.dart';
 import '../services/notification_service.dart';
-import '../services/security_service.dart';
 import '../theme/app_theme.dart';
-import '../widgets/pin_setup_sheet.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -23,8 +21,6 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   StreamSubscription<dynamic>? _authSubscription;
-  SecuritySnapshot? _securitySnapshot;
-  bool _isLoadingSecurity = true;
   bool _isLoadingBackend = true;
   bool _isBusy = false;
   bool _isSyncing = false;
@@ -33,7 +29,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
-    _loadSecurityState();
     _loadBackendState();
     _authSubscription = BackendService.authStateChanges?.listen((_) {
       _loadBackendState();
@@ -44,18 +39,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void dispose() {
     _authSubscription?.cancel();
     super.dispose();
-  }
-
-  Future<void> _loadSecurityState() async {
-    final snapshot = await SecurityService.getSnapshot();
-    if (!mounted) {
-      return;
-    }
-
-    setState(() {
-      _securitySnapshot = snapshot;
-      _isLoadingSecurity = false;
-    });
   }
 
   void _showSnackBar(String message, {Color? backgroundColor}) {
@@ -309,214 +292,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _showSnackBar('Bulut hesabindan cikis yapildi.');
   }
 
-  Future<void> _changePin() async {
-    if (_isBusy) {
-      return;
-    }
-
-    final appState = IlacHatirlaticiApp.of(context);
-    final modalContext = appState?.modalContext ?? context;
-    final hadPin = _securitySnapshot?.hasPin == true;
-    final didSave = await showPinSetupSheet(
-      modalContext,
-      isChangingPin: hadPin,
-      title: hadPin ? 'PIN Değiştir' : 'PIN Oluştur',
-      subtitle: hadPin
-          ? 'Uygulama kilidiniz icin yeni bir PIN belirleyin.'
-          : 'Isterseniz uygulama acilisinda ve arka plandan dondugunde kullanilacak bir PIN olusturun.',
-    );
-
-    if (!mounted || !didSave) {
-      return;
-    }
-
-    await _loadSecurityState();
-    await appState?.refreshSecurityState();
-
-    if (!mounted) {
-      return;
-    }
-
-    _showSnackBar(hadPin ? 'PIN güncellendi.' : 'PIN oluşturuldu.');
-  }
-
-  Future<void> _removePin() async {
-    final snapshot = _securitySnapshot;
-    if (_isBusy || snapshot?.hasPin != true) {
-      return;
-    }
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: Text(
-            'PIN kapatilsin mi?',
-            style: GoogleFonts.nunito(fontWeight: FontWeight.w800),
-          ),
-          content: Text(
-            'PIN kaldirilirsa biyometri ve arka plandan donunce kilitle secenegi de kapanir.',
-            style: GoogleFonts.nunito(height: 1.5),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: Text('Vazgec', style: GoogleFonts.nunito()),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              style: FilledButton.styleFrom(
-                backgroundColor: AppTheme.errorColor,
-              ),
-              child: Text(
-                'PIN Kapat',
-                style: GoogleFonts.nunito(fontWeight: FontWeight.w700),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (confirmed != true || !mounted) {
-      return;
-    }
-
-    final appState = IlacHatirlaticiApp.of(context);
-
-    setState(() {
-      _isBusy = true;
-    });
-
-    await SecurityService.removePin();
-    await _loadSecurityState();
-    await appState?.refreshSecurityState();
-
-    if (!mounted) {
-      return;
-    }
-
-    setState(() {
-      _isBusy = false;
-    });
-
-    _showSnackBar('PIN kapatildi. Uygulama acilista kilit istemeyecek.');
-  }
-
-  Future<void> _toggleBiometrics(bool enabled) async {
-    final appState = IlacHatirlaticiApp.of(context);
-    if (_isBusy) {
-      return;
-    }
-
-    final snapshot = _securitySnapshot;
-    if (snapshot == null) {
-      return;
-    }
-
-    if (!snapshot.hasPin) {
-      _showSnackBar(
-        'Once bir PIN olusturun.',
-        backgroundColor: AppTheme.warningColor,
-      );
-      return;
-    }
-
-    if (enabled && !snapshot.biometricsAvailable) {
-      _showSnackBar(
-        'Bu cihazda biyometrik dogrulama kullanilamiyor.',
-        backgroundColor: AppTheme.warningColor,
-      );
-      return;
-    }
-
-    setState(() {
-      _isBusy = true;
-    });
-
-    var canEnable = true;
-    if (enabled) {
-      canEnable = await SecurityService.authenticateWithBiometrics(
-        reason: 'Biyometrik kilidi etkinlestirmek icin dogrulama yapin',
-      );
-    }
-
-    if (canEnable) {
-      await SecurityService.setBiometricsEnabled(enabled);
-      await _loadSecurityState();
-      await appState?.refreshSecurityState();
-    }
-
-    if (!mounted) {
-      return;
-    }
-
-    setState(() {
-      _isBusy = false;
-    });
-
-    if (!canEnable) {
-      _showSnackBar(
-        'Biyometrik dogrulama tamamlanamadi.',
-        backgroundColor: AppTheme.errorColor,
-      );
-    }
-  }
-
-  Future<void> _toggleLockOnResume(bool enabled) async {
-    if (_isBusy) {
-      return;
-    }
-
-    final snapshot = _securitySnapshot;
-    if (snapshot == null) {
-      return;
-    }
-
-    if (!snapshot.hasPin) {
-      _showSnackBar(
-        'Bu secenek icin once bir PIN olusturun.',
-        backgroundColor: AppTheme.warningColor,
-      );
-      return;
-    }
-
-    final appState = IlacHatirlaticiApp.of(context);
-
-    setState(() {
-      _isBusy = true;
-    });
-
-    await SecurityService.setLockOnResume(enabled);
-    await _loadSecurityState();
-    await appState?.refreshSecurityState();
-
-    if (!mounted) {
-      return;
-    }
-
-    setState(() {
-      _isBusy = false;
-    });
-  }
-
-  Future<void> _lockNow() async {
-    final snapshot = _securitySnapshot;
-    if (snapshot?.hasPin != true) {
-      _showSnackBar(
-        'Uygulamayi kilitlemek icin once bir PIN olusturun.',
-        backgroundColor: AppTheme.warningColor,
-      );
-      return;
-    }
-
-    await IlacHatirlaticiApp.of(context)?.lockNow();
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final snapshot = _securitySnapshot;
     final appState = IlacHatirlaticiApp.of(context);
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
@@ -527,89 +305,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: ListView(
           padding: const EdgeInsets.only(bottom: 28),
           children: [
-            _buildGradientHeader(snapshot, isDarkMode),
-            _buildSettingsSectionTitle('Güvenlik'),
-            if (_isLoadingSecurity)
-              _buildContentPadding(child: _buildLoadingCard(isDark))
-            else
-              _buildContentPadding(
-                child: _buildSectionCard(
-                  isDark: isDark,
-                  children: [
-                    _buildInfoTile(
-                      icon: Icons.enhanced_encryption_rounded,
-                      title: 'Yerel Sifreleme',
-                      subtitle:
-                          'İlaç kayıtları cihazdaki güvenli anahtarla şifreli tutulur.',
-                      isDark: isDark,
-                    ),
-                    _buildDivider(isDark),
-                    _buildActionTile(
-                      icon: Icons.pin_rounded,
-                      title: snapshot?.hasPin == true
-                          ? 'PIN Degistir'
-                          : 'PIN Oluştur',
-                      subtitle: snapshot?.hasPin == true
-                          ? 'Uygulama kilidiniz icin yeni bir PIN belirleyin.'
-                          : '4-6 haneli bir uygulama PINi olusturun.',
-                      isDark: isDark,
-                      enabled: !_isBusy,
-                      onTap: _changePin,
-                    ),
-                    if (snapshot?.hasPin == true) ...[
-                      _buildDivider(isDark),
-                      _buildActionTile(
-                        icon: Icons.lock_open_rounded,
-                        title: 'PIN Kapat',
-                        subtitle:
-                            'PIN, biyometri ve geri donuste kilitle birlikte kapanir.',
-                        isDark: isDark,
-                        enabled: !_isBusy,
-                        onTap: _removePin,
-                      ),
-                    ],
-                    _buildDivider(isDark),
-                    _buildSwitchTile(
-                      icon: Icons.fingerprint_rounded,
-                      title: 'Biyometri ile Ac',
-                      subtitle: snapshot?.hasPin == true
-                          ? (snapshot?.biometricsAvailable == true
-                              ? 'Parmak izi veya yuz tanima ile hizli giris.'
-                              : 'Bu cihazda biyometri desteklenmiyor.')
-                          : 'Bu secenek icin once PIN olusturun.',
-                      isDark: isDark,
-                      value: snapshot?.hasPin == true &&
-                          snapshot?.biometricsEnabled == true,
-                      enabled: snapshot?.hasPin == true &&
-                          snapshot?.biometricsAvailable == true &&
-                          !_isBusy,
-                      onChanged: _toggleBiometrics,
-                    ),
-                    _buildDivider(isDark),
-                    _buildSwitchTile(
-                      icon: Icons.lock_clock_rounded,
-                      title: 'Geri Donuste Kilitle',
-                      subtitle: snapshot?.hasPin == true
-                          ? 'Uygulama tekrar acildiginda PIN veya biyometri istensin.'
-                          : 'Bu secenek icin once PIN olusturun.',
-                      isDark: isDark,
-                      value: snapshot?.hasPin == true &&
-                          snapshot?.lockOnResume == true,
-                      enabled: snapshot?.hasPin == true && !_isBusy,
-                      onChanged: _toggleLockOnResume,
-                    ),
-                    _buildDivider(isDark),
-                    _buildActionTile(
-                      icon: Icons.lock_rounded,
-                      title: 'Simdi Kilitle',
-                      subtitle: 'Uygulamayi hemen kilit ekranina al.',
-                      isDark: isDark,
-                      enabled: snapshot?.hasPin == true && !_isBusy,
-                      onTap: _lockNow,
-                    ),
-                  ],
-                ),
-              ),
+            _buildGradientHeader(isDarkMode),
             _buildSettingsSectionTitle('Bulut Senkron'),
             _buildContentPadding(
               child: _buildBackendSection(isDark),
@@ -787,8 +483,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildGradientHeader(SecuritySnapshot? snapshot, bool isDarkMode) {
-    final isPinSet = snapshot?.hasPin == true;
+  Widget _buildGradientHeader(bool isDarkMode) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
       decoration: const BoxDecoration(
@@ -816,35 +511,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
           Text(
-            'Güvenlik, tema ve uygulama tercihleri',
+            'Tema ve uygulama tercihleri',
             style: GoogleFonts.nunito(
               fontSize: 12,
               color: Colors.white.withValues(alpha: 0.75),
             ),
           ),
           const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: _buildHeaderStatusCard(
-                  label: 'Koruma',
-                  value: isPinSet ? 'PIN Aktif' : 'PIN Kapalı',
-                  icon: isPinSet ? Icons.lock_rounded : Icons.lock_open_rounded,
-                  isActive: isPinSet,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _buildHeaderStatusCard(
-                  label: 'Tema',
-                  value: isDarkMode ? 'Karanlık' : 'Açık',
-                  icon: isDarkMode
-                      ? Icons.dark_mode_rounded
-                      : Icons.light_mode_rounded,
-                  isActive: true,
-                ),
-              ),
-            ],
+          _buildHeaderStatusCard(
+            label: 'Tema',
+            value: isDarkMode ? 'Karanlık' : 'Açık',
+            icon: isDarkMode
+                ? Icons.dark_mode_rounded
+                : Icons.light_mode_rounded,
+            isActive: true,
           ),
         ],
       ),
