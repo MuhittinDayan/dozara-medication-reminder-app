@@ -7,6 +7,7 @@ import '../models/medicine.dart';
 import '../models/profile.dart';
 import '../services/hive_service.dart';
 import '../services/notification_service.dart';
+import '../utils/stats_calculator.dart';
 import '../theme/app_theme.dart';
 import 'add_medicine_screen.dart';
 import 'family_profiles_screen.dart';
@@ -32,6 +33,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   List<Medicine> _lowStockMedicines = [];
   List<DoseLog> _upcomingAgenda = [];
   DateTime _selectedDay = DateTime.now();
+  int _currentStreak = 0;
 
   @override
   void initState() {
@@ -65,6 +67,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _lowStockMedicines = HiveService.getLowStockMedicines();
       _upcomingAgenda =
           HiveService.getPendingFutureDoseLogs(daysAhead: 60).take(18).toList();
+      final recentLogs = HiveService.getRecentDoseLogs(days: 90);
+      _currentStreak = StatsCalculator.calculateStreak(recentLogs);
     });
   }
 
@@ -171,6 +175,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               HomeHeader(
                 activeProfile: HiveService.getActiveProfile(),
                 summary: _daySummary,
+                currentStreak: _currentStreak,
                 isDark: isDark,
                 isSelectedDayToday: _isSelectedDayToday,
                 nextMedicine: _nextDose == null ? null : HiveService.getMedicine(_nextDose!.medicineId),

@@ -11,6 +11,7 @@ import 'home_day_summary.dart';
 class HomeHeader extends StatelessWidget {
   final Profile activeProfile;
   final HomeDaySummary summary;
+  final int currentStreak;
   final bool isDark;
   final bool isSelectedDayToday;
   final Medicine? nextMedicine;
@@ -21,6 +22,7 @@ class HomeHeader extends StatelessWidget {
     super.key,
     required this.activeProfile,
     required this.summary,
+    required this.currentStreak,
     required this.isDark,
     required this.isSelectedDayToday,
     this.nextMedicine,
@@ -90,13 +92,36 @@ class HomeHeader extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
-                      isSelectedDayToday ? 'Bugünkü İlaçlar' : 'Seçili Gün',
-                      style: GoogleFonts.nunito(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          isSelectedDayToday ? 'Bugünkü İlaçlar' : 'Seçili Gün',
+                          style: GoogleFonts.nunito(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                        ),
+                        if (currentStreak > 0) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: Colors.orange.withValues(alpha: 0.5)),
+                            ),
+                            child: Text(
+                              '🔥 $currentStreak gün',
+                              style: GoogleFonts.nunito(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.orange.shade100,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 4),
                     Text(

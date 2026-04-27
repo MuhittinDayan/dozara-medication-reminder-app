@@ -197,6 +197,29 @@ class StatsCalculator {
     return streak;
   }
 
+  static int calculateStreak(List<DoseLog> logs) {
+    final today = DateTime.now();
+    var streak = 0;
+
+    for (var i = 0; i < 365; i++) {
+      final day = today.subtract(Duration(days: i));
+      final dayLogs = logs.where((log) =>
+        log.scheduledTime.year == day.year &&
+        log.scheduledTime.month == day.month &&
+        log.scheduledTime.day == day.day
+      ).toList();
+
+      if (dayLogs.isEmpty) break;
+
+      final allTaken = dayLogs.every((log) => log.status == DoseStatus.taken);
+      if (!allTaken) break;
+
+      streak++;
+    }
+
+    return streak;
+  }
+
   static String trendLabel(int diff) {
     if (diff > 0) return '↑ $diff%';
     if (diff < 0) return '↓ ${diff.abs()}%';

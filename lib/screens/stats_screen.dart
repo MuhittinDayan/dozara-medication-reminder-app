@@ -357,7 +357,7 @@ class _StatsScreenState extends State<StatsScreen> with WidgetsBindingObserver {
     final takenCount = weekLogs.where((log) => log.status == DoseStatus.taken).length;
     final missedCount = weekLogs.where((log) => log.status == DoseStatus.missed).length;
     final totalCount = weekLogs.length;
-    final streak = StatsCalculator.fullCompletionStreak(daySummaries);
+    final streak = isUsingDemoData ? 3 : StatsCalculator.calculateStreak(logs90Days);
     final previousMissedCount =
         previousWeekLogs.where((log) => log.status == DoseStatus.missed).length;
     final insight = StatsCalculator.buildInsight(
