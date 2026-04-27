@@ -213,7 +213,7 @@ class NotificationService {
     await _notifications.zonedSchedule(
       999999,
       'Günlük Özet',
-      'Bugünkü ilaç durumunuzu görmek için dokunun.',
+      'Bugünkü ilaçlarını kontrol et, sağlığın önceliğin olsun.',
       tzDate,
       const NotificationDetails(
         android: AndroidNotificationDetails(
@@ -228,6 +228,46 @@ class NotificationService {
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: DateTimeComponents.time,
+    );
+  }
+
+  static Future<void> showDailySummaryNow() async {
+    final today = DateTime.now();
+    final logs = HiveService.getDoseLogsForDate(today);
+    
+    final taken = logs.where((l) => l.status == DoseStatus.taken).length;
+    final missed = logs.where((l) => l.status == DoseStatus.missed).length;
+    final total = logs.length;
+
+    final String title;
+    final String body;
+
+    if (total == 0) {
+      return; 
+    } else if (taken == total) {
+      title = '🎉 Harika gün!';
+      body = 'Bugün $total dozun tamamını aldın. Serini koruyorsun!';
+    } else if (taken == 0) {
+      title = '⚠️ Bugün hiç ilaç almadın';
+      body = '$total dozun tamamı atlandı. Sağlığın için dikkat et.';
+    } else {
+      title = '💊 Günlük özet';
+      body = '$taken/$total doz alındı${missed > 0 ? ', $missed doz atlandı' : ''}.';
+    }
+
+    await _notifications.show(
+      999999,
+      title,
+      body,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'daily_summary',
+          'Günlük Özetler',
+          channelDescription: 'Her akşam gelen ilaç özeti',
+          importance: Importance.defaultImportance,
+          priority: Priority.defaultPriority,
+        ),
+      ),
     );
   }
 
