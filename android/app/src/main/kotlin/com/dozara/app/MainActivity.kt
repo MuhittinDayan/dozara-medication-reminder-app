@@ -1,4 +1,4 @@
-package com.ilachatirlatici.ilac_hatirlatici
+package com.dozara.app
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 
