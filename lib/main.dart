@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 
 import 'cubit/profile_cubit.dart';
 import 'data/backend/backend_service.dart';
@@ -17,7 +18,8 @@ import 'services/notification_service.dart';
 import 'theme/app_theme.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
   await dotenv.load(fileName: '.env', isOptional: true);
   await BackendService.init();
   await initializeDateFormatting('tr_TR', null);
@@ -41,25 +43,26 @@ void main() async {
     ),
   );
 
-  runApp(const IlacHatirlaticiApp());
+  FlutterNativeSplash.remove();
+  runApp(const DozaraApp());
 }
 
-class IlacHatirlaticiApp extends StatefulWidget {
-  const IlacHatirlaticiApp({
+class DozaraApp extends StatefulWidget {
+  const DozaraApp({
     super.key,
     this.showOnboarding = true,
   });
 
   final bool showOnboarding;
 
-  static IlacHatirlaticiAppState? of(BuildContext context) =>
-      context.findAncestorStateOfType<IlacHatirlaticiAppState>();
+  static DozaraAppState? of(BuildContext context) =>
+      context.findAncestorStateOfType<DozaraAppState>();
 
   @override
-  State<IlacHatirlaticiApp> createState() => IlacHatirlaticiAppState();
+  State<DozaraApp> createState() => DozaraAppState();
 }
 
-class IlacHatirlaticiAppState extends State<IlacHatirlaticiApp> {
+class DozaraAppState extends State<DozaraApp> {
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
   ThemeMode _themeMode = ThemeMode.system;
@@ -156,7 +159,7 @@ class IlacHatirlaticiAppState extends State<IlacHatirlaticiApp> {
       create: (_) => ProfileCubit()..hydrate(),
       child: MaterialApp(
         navigatorKey: _navigatorKey,
-        title: 'İlaç Hatırlatıcı',
+        title: 'Dozara',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,

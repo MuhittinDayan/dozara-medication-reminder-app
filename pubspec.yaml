@@ -43,6 +43,7 @@ dev_dependencies:
   hive_generator: ^2.0.1
   build_runner: ^2.4.13
   flutter_launcher_icons: ^0.14.1
+  flutter_native_splash: ^2.4.1
 
 flutter:
   uses-material-design: true
@@ -54,3 +55,13 @@ flutter_launcher_icons:
   ios: true
   image_path: "assets/icons/app_icon.png"
   min_sdk_android: 21
+
+flutter_native_splash:
+  color: "#7C3AED"
+  image: assets/icons/app_icon.png
+  color_dark: "#4C1D95"
+  image_dark: assets/icons/app_icon.png
+  android_12:
+    color: "#7C3AED"
+    image: assets/icons/app_icon.png
+  fullscreen: true
