@@ -20,7 +20,6 @@ dependencies:
   lottie: ^3.3.3
   google_fonts: ^6.2.1
   fl_chart: ^0.69.0
-  google_generative_ai: ^0.4.3
   google_mlkit_text_recognition: ^0.15.1
   image_picker: ^1.1.2
   speech_to_text: ^7.3.0
@@ -31,10 +30,19 @@ dependencies:
   printing: ^5.13.1
   share_plus: ^10.1.2
   flutter_dotenv: ^6.0.1
+  flutter_native_splash: ^2.4.1
 
   crypto: ^3.0.7
+  flutter_secure_storage: ^9.2.4
   supabase_flutter: ^2.12.4
   flutter_animate: ^4.5.2
+  
+  # Firebase Cloud Messaging
+  firebase_core: ^3.11.0
+  firebase_messaging: ^15.2.0
+  
+  # Home Screen Widget
+  home_widget: ^0.7.0
 
 dev_dependencies:
   flutter_test:
@@ -43,12 +51,12 @@ dev_dependencies:
   hive_generator: ^2.0.1
   build_runner: ^2.4.13
   flutter_launcher_icons: ^0.14.1
-  flutter_native_splash: ^2.4.1
 
 flutter:
   uses-material-design: true
   assets:
     - .env
+    - assets/icons/app_icon.png
 
 flutter_launcher_icons:
   android: true

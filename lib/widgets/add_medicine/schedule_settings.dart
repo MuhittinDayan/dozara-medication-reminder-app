@@ -103,7 +103,7 @@ class ScheduleSettings extends StatelessWidget {
           ),
         );
       case MedicineScheduleType.specificDays:
-        final options = const [
+        const options = [
           (DateTime.monday, 'Pzt'),
           (DateTime.tuesday, 'Sal'),
           (DateTime.wednesday, 'Car'),

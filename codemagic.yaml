@@ -1,0 +1,101 @@
+# Codemagic CI/CD Yapılandırması
+# Dozara - İlaç Hatırlatıcı Uygulaması
+
+workflows:
+  # Android Build Workflow
+  dozara-android:
+    name: Dozara Android
+    max_build_duration: 120
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: latest
+    cache:
+      cache_paths:
+        - $HOME/.pub-cache
+        - $CM_BUILD_DIR/android/.gradle
+    scripts:
+      - name: Flutter pub get
+        script: |
+          flutter pub get
+      - name: Get dependencies
+        script: |
+          flutter packages pub get
+      - name: Build Android APK
+        script: |
+          flutter build apk --release --no-pub
+        artifacts:
+          - build/app/outputs/flutter-apk/*.apk
+          - build/app/outputs/flutter-apk/*.aab
+
+  # iOS Build Workflow (macOS gerektirir)
+  dozara-ios:
+    name: Dozara iOS
+    max_build_duration: 180
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: latest
+    cache:
+      cache_paths:
+        - $HOME/.pub-cache
+        - $CM_BUILD_DIR/ios/Pods
+    scripts:
+      - name: Set up code signing
+        script: |
+          keychain initialize
+          keychain add-certificates
+          keychain create-keychain
+          # iOS code signing setup
+          # Not: Sertifikalar Codemagic ortamında yapılandırılmalı
+      - name: Set up iOS dependencies
+        script: |
+          cd ios && pod install && cd ..
+      - name: Flutter pub get
+        script: |
+          flutter pub get
+      - name: Build iOS IPA
+        script: |
+          flutter build ipa --release --no-pub
+        artifacts:
+          - build/ios/ipa/*.ipa
+
+  # Her iki platform icin build
+  dozara-all:
+    name: Dozara (All Platforms)
+    max_build_duration: 240
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: latest
+    cache:
+      cache_paths:
+        - $HOME/.pub-cache
+        - $CM_BUILD_DIR/android/.gradle
+        - $CM_BUILD_DIR/ios/Pods
+    scripts:
+      - name: Android Setup
+        script: |
+          echo "Android build setup"
+      - name: iOS Setup
+        script: |
+          cd ios && pod install && cd ..
+      - name: Flutter pub get
+        script: |
+          flutter pub get
+      - name: Build Android APK
+        script: |
+          flutter build apk --release --no-pub
+        artifacts:
+          - build/app/outputs/flutter-apk/*.apk
+          - build/app/outputs/flutter-apk/*.aab
+      - name: Build iOS IPA
+        script: |
+          flutter build ipa --release --no-pub
+        artifacts:
+          - build/ios/ipa/*.ipa
+
+# Notlar:
+# 1. iOS build icin Apple Developer hesabi ve sertifikalar gerekir
+# 2. GoogleService-Info.plist dosyasi ios/Runner klasorunde olmali
+# 3. google-services.json dosyasi android/app klasorunde olmali

@@ -9,7 +9,7 @@ class HeatmapCard extends StatelessWidget {
   final String title;
   final String trailing;
   final int crossAxisCount;
-  final bool showDemoBanner;
+  final bool hasData;
   final bool isDark;
 
   const HeatmapCard({
@@ -18,7 +18,7 @@ class HeatmapCard extends StatelessWidget {
     required this.title,
     required this.trailing,
     required this.crossAxisCount,
-    required this.showDemoBanner,
+    required this.hasData,
     required this.isDark,
   });
 
@@ -57,7 +57,7 @@ class HeatmapCard extends StatelessWidget {
               ),
             ],
           ),
-          if (showDemoBanner) ...[
+          if (!hasData) ...[
             const SizedBox(height: 10),
             Container(
               width: double.infinity,
@@ -67,7 +67,7 @@ class HeatmapCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                '✦ İlaç ekledikçe gerçek veriler burada görünecek',
+                'Ilac plani olusturduktan sonra gercek uyum verileri burada gorunecek.',
                 style: GoogleFonts.nunito(
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
@@ -120,7 +120,8 @@ class HeatmapCard extends StatelessWidget {
                 style: GoogleFonts.nunito(
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
-                  color: isDark ? const Color(0xFFC4B7E9) : AppTheme.textSecondary,
+                  color:
+                      isDark ? const Color(0xFFC4B7E9) : AppTheme.textSecondary,
                 ),
               ),
               const SizedBox(width: 6),
@@ -141,7 +142,8 @@ class HeatmapCard extends StatelessWidget {
                 style: GoogleFonts.nunito(
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
-                  color: isDark ? const Color(0xFFC4B7E9) : AppTheme.textSecondary,
+                  color:
+                      isDark ? const Color(0xFFC4B7E9) : AppTheme.textSecondary,
                 ),
               ),
             ],

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../cubit/profile_cubit.dart';
 import '../data/backend/backend_service.dart';
@@ -87,7 +88,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     super.dispose();
   }
 
-  bool get _isLightPage => _page == 2 || _page == 3 || _page == 4;
+  bool get _isLightPage => _page == 0 || _page == 2 || _page == 3 || _page == 4;
 
   Future<void> _goNext() async {
     if (_page >= 5) {
@@ -171,7 +172,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     if (!BackendService.isInitialized || configWarning != null) {
       setState(() {
         _authError = configWarning ??
-            'Supabase hazir degil. Uygulamayi .env dosyasindan sonra yeniden baslatin.';
+            'Hesap servisi hazir degil. .env ayarlarini kontrol edip uygulamayi yeniden baslatin.';
         _authMessageIsInfo = false;
       });
       return;
@@ -179,9 +180,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
     final email = _emailController.text.trim();
     final password = _passwordController.text;
-    if (email.isEmpty || password.length < 6) {
+    final validationMessage = BackendService.validateEmailAndPassword(
+      email: email,
+      password: password,
+    );
+    if (validationMessage != null) {
       setState(() {
-        _authError = 'E-posta ve en az 6 karakterli sifre girin.';
+        _authError = validationMessage;
         _authMessageIsInfo = false;
       });
       return;
@@ -194,19 +199,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     });
 
     try {
+      AuthResponse authResponse;
       if (createAccount) {
-        await BackendService.signUpWithPassword(
+        authResponse = await BackendService.signUpWithPassword(
           email: email,
           password: password,
         );
       } else {
-        await BackendService.signInWithPassword(
+        authResponse = await BackendService.signInWithPassword(
           email: email,
           password: password,
         );
       }
 
-      if (createAccount && BackendService.currentUser == null) {
+      if (createAccount && authResponse.session == null) {
         if (!mounted) {
           return;
         }
@@ -215,7 +221,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           _isSignInMode = true;
           _authMessageIsInfo = true;
           _authError =
-              'Hesap olusturuldu. E-posta onayi aciksa gelen kutunuzu kontrol edin, sonra giris yapin.';
+              'Onay e-postasi gonderildi. Gelen kutusundaki linke tikladiktan sonra buradan giris yapin.';
         });
         return;
       }
@@ -288,6 +294,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             _isLightPage ? AppTheme.backgroundColor : AppTheme.primaryDark,
         body: PageView(
           controller: _pageController,
+          physics: const NeverScrollableScrollPhysics(),
           onPageChanged: (value) => setState(() => _page = value),
           children: [
             _buildSplashPage(),
@@ -303,69 +310,83 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildSplashPage() {
-    return _GradientPageFrame(
-      gradient: const LinearGradient(
-        colors: [
-          Color(0xFF4C1D95),
-          AppTheme.primaryColor,
-          AppTheme.primaryLight
-        ],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
+    return _LightPageFrame(
       children: [
-        const Spacer(),
-        Container(
-          width: 96,
-          height: 96,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.24)),
-          ),
-          child: const Icon(
-            Icons.medication_rounded,
-            color: Colors.white,
-            size: 48,
+        const Spacer(flex: 2),
+        Center(
+          child: Container(
+            width: 148,
+            height: 148,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(38),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.18),
+                  blurRadius: 34,
+                  offset: const Offset(0, 18),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(28),
+              child: Image.asset(
+                'assets/icons/app_icon.png',
+                fit: BoxFit.cover,
+              ),
+            ),
           ),
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 26),
         Text(
-          'MediTrack',
-          style: GoogleFonts.nunito(
-            fontSize: 34,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 0.4,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Ailenizin sagligi, her zaman\nelinizin altinda',
+          'Dozara',
           textAlign: TextAlign.center,
           style: GoogleFonts.nunito(
-            fontSize: 15,
-            height: 1.5,
-            fontWeight: FontWeight.w700,
-            color: Colors.white.withValues(alpha: 0.72),
+            fontSize: 38,
+            fontWeight: FontWeight.w900,
+            color: AppTheme.textPrimary,
           ),
         ),
-        const SizedBox(height: 34),
-        const _HeroLineArt(),
-        const Spacer(),
+        const SizedBox(height: 10),
+        Text(
+          'Ilac takibini, hatirlatmalari ve aile profillerini tek yerde duzenle.',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.nunito(
+            fontSize: 14,
+            height: 1.45,
+            fontWeight: FontWeight.w700,
+            color: AppTheme.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 26),
+        const _SplashHighlightRow(
+          icon: Icons.notifications_active_rounded,
+          label: 'Zamaninda hatirlatir',
+        ),
+        const _SplashHighlightRow(
+          icon: Icons.lock_rounded,
+          label: 'Verileri cihazda sifreler',
+        ),
+        const _SplashHighlightRow(
+          icon: Icons.auto_awesome_rounded,
+          label: 'AI destegi hesabina baglidir',
+        ),
+        const Spacer(flex: 3),
+        _DotsIndicator(currentIndex: _page),
+        const SizedBox(height: 18),
         _PrimaryOnboardingButton(
           label: 'Baslayalim',
           icon: Icons.arrow_forward_rounded,
-          inverted: true,
           onPressed: _goNext,
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         TextButton(
           onPressed: () => _goToCloudPage(signInMode: true),
           child: Text(
             'Zaten hesabin var mi? Giris yap',
             style: GoogleFonts.nunito(
-              color: Colors.white.withValues(alpha: 0.7),
+              color: AppTheme.primaryColor,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -382,24 +403,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         end: Alignment.bottomRight,
       ),
       children: [
-        Row(
-          children: [
-            const Spacer(),
-            TextButton(
-              onPressed: () => _finish(openAddMedicine: false),
-              child: Text(
-                'Gec',
-                style: GoogleFonts.nunito(
-                  color: Colors.white.withValues(alpha: 0.56),
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 34),
         Text(
-          'Neden MediTrack?',
+          'Neden Dozara?',
           style: GoogleFonts.nunito(
             fontSize: 28,
             fontWeight: FontWeight.w900,
@@ -564,7 +570,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         _PrimaryOnboardingButton(
           label: 'Izin Ver',
           icon: Icons.arrow_forward_rounded,
-          onPressed: _goNext,
+          onPressed: () async {
+            await NotificationService.requestNotificationPermission();
+            if (mounted) {
+              await _goNext();
+            }
+          },
         ),
         const SizedBox(height: 4),
         TextButton(
@@ -788,7 +799,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         ),
         const SizedBox(height: 8),
         Text(
-          'MediTrack hazir. Simdi ilk ilacini ekleyebilir veya receteni tarayabilirsin.',
+          'Dozara hazir. Simdi ilk ilacini ekleyebilir veya receteni tarayabilirsin.',
           textAlign: TextAlign.center,
           style: GoogleFonts.nunito(
             fontSize: 14,
@@ -798,9 +809,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
         ),
         const SizedBox(height: 24),
-        const _ReadySummaryRow(
+        _ReadySummaryRow(
           icon: Icons.auto_awesome_rounded,
-          label: 'Gemini AI Asistan aktif',
+          label: BackendService.currentUser == null
+              ? 'AI destegi hesapla acilir'
+              : 'Gemini AI Asistan aktif',
         ),
         const _ReadySummaryRow(
           icon: Icons.notifications_rounded,
@@ -856,7 +869,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         ),
         const SizedBox(height: 16),
         Text(
-          'Bulut hesabini baglayalim',
+          'Hesap ve yedekleme',
           textAlign: TextAlign.center,
           style: GoogleFonts.nunito(
             fontSize: 25,
@@ -866,7 +879,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Hesap, ilaclarini yeni telefonda geri getirmek ve aile profillerini cihazlar arasinda esitlemek icin kullanilir.',
+          'Hesap acarsan ilaclarini yeni telefonda geri getirebilir ve AI ozelliklerini kullanabilirsin.',
           textAlign: TextAlign.center,
           style: GoogleFonts.nunito(
             fontSize: 14,
@@ -983,7 +996,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           TextButton(
             onPressed: _isAuthenticating ? null : _goNext,
             child: Text(
-              'Simdilik atla',
+              'Sonra yaparim',
               style: GoogleFonts.nunito(
                 color: AppTheme.textTertiary,
                 fontWeight: FontWeight.w900,
@@ -1047,17 +1060,29 @@ class _ResponsivePagePadding extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(22, 18, 22, 22),
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 430),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: children,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            physics: const ClampingScrollPhysics(),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(22, 18, 22, 22),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 430),
+                    child: IntrinsicHeight(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: children,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
@@ -1208,6 +1233,60 @@ class _FeaturePill extends StatelessWidget {
             ),
             child:
                 const Icon(Icons.check_rounded, color: Colors.white, size: 16),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SplashHighlightRow extends StatelessWidget {
+  const _SplashHighlightRow({
+    required this.icon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppTheme.borderColor),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryColor.withValues(alpha: 0.05),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: AppTheme.accentColor,
+              borderRadius: BorderRadius.circular(13),
+            ),
+            child: Icon(icon, color: AppTheme.primaryColor, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: GoogleFonts.nunito(
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+                color: AppTheme.textPrimary,
+              ),
+            ),
           ),
         ],
       ),
@@ -1519,81 +1598,6 @@ class _SectionLabel extends StatelessWidget {
       ),
     );
   }
-}
-
-class _HeroLineArt extends StatelessWidget {
-  const _HeroLineArt();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 96,
-      child: CustomPaint(
-        painter: _HeroLineArtPainter(),
-        child: const SizedBox.expand(),
-      ),
-    );
-  }
-}
-
-class _HeroLineArtPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final pillPaint = Paint()..color = Colors.white.withValues(alpha: 0.26);
-    final pillAccent = Paint()..color = Colors.white.withValues(alpha: 0.48);
-    final stroke = Paint()
-      ..color = Colors.white.withValues(alpha: 0.7)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-
-    final centerY = size.height * 0.5;
-    final pill = RRect.fromRectAndRadius(
-      Rect.fromLTWH(size.width * 0.12, centerY - 12, 78, 24),
-      const Radius.circular(16),
-    );
-    canvas.drawRRect(pill, pillPaint);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(size.width * 0.12, centerY - 12, 39, 24),
-        const Radius.circular(16),
-      ),
-      pillAccent,
-    );
-
-    final path = Path()
-      ..moveTo(size.width * 0.45, centerY + 2)
-      ..lineTo(size.width * 0.51, centerY + 2)
-      ..lineTo(size.width * 0.55, centerY - 18)
-      ..lineTo(size.width * 0.59, centerY + 24)
-      ..lineTo(size.width * 0.63, centerY - 7)
-      ..lineTo(size.width * 0.68, centerY + 8)
-      ..lineTo(size.width * 0.73, centerY + 8);
-    canvas.drawPath(path, stroke);
-
-    final familyPaint = Paint()..color = Colors.white.withValues(alpha: 0.34);
-    canvas.drawCircle(Offset(size.width * 0.82, centerY - 9), 10, familyPaint);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromCenter(
-          center: Offset(size.width * 0.82, centerY + 16),
-          width: 16,
-          height: 22,
-        ),
-        const Radius.circular(8),
-      ),
-      familyPaint,
-    );
-    canvas.drawCircle(
-      Offset(size.width * 0.91, centerY - 4),
-      7,
-      Paint()..color = Colors.white.withValues(alpha: 0.24),
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _ConfettiStrip extends StatelessWidget {

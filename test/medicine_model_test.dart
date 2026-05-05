@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:ilac_hatirlatici/models/medicine.dart';
+import 'package:dozara/models/medicine.dart';
 
 void main() {
   group('Medicine scheduling', () {

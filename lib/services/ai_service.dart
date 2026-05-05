@@ -1,10 +1,12 @@
+import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../data/backend/backend_service.dart';
 import '../models/dose_log.dart';
 import '../models/medicine.dart';
+import 'hive_service.dart';
 import 'ocr_service.dart';
 
 enum ScanFieldConfidence {
@@ -95,12 +97,10 @@ class AssistantContext {
         .where((log) => log.scheduledTime.isAfter(cutoff))
         .toList(growable: false);
     final total = recentLogs.length;
-    final taken = recentLogs
-        .where((log) => log.status == DoseStatus.taken)
-        .length;
-    final missed = recentLogs
-        .where((log) => log.status == DoseStatus.missed)
-        .length;
+    final taken =
+        recentLogs.where((log) => log.status == DoseStatus.taken).length;
+    final missed =
+        recentLogs.where((log) => log.status == DoseStatus.missed).length;
 
     return AssistantContext(
       userName: userName,
@@ -133,9 +133,21 @@ class AssistantStructuredResponse {
   bool get hasCard => type != AssistantResponseType.plain || title.isNotEmpty;
 }
 
+class AIQuotaExceededException implements Exception {
+  const AIQuotaExceededException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
 class AIService {
-  static const String _modelName = 'gemini-3.1-pro-preview';
-  static const String _placeholderApiKey = 'BURAYA_GERCEK_API_KEY_GELECEK';
+  static const int _scanDailyLimit = 10;
+  static const int _assistantDailyLimit = 20;
+  static const String _scanQuotaKey = 'geminiScan';
+  static const String _assistantQuotaKey = 'geminiAssistant';
+  static const String _proxyFunctionName = 'gemini-proxy';
   static const List<String> _supportedKeys = <String>[
     'name',
     'form',
@@ -145,9 +157,6 @@ class AIService {
     'usageNotes',
   ];
 
-  static late String _apiKey;
-  static late GenerativeModel _visionModel;
-  static late GenerativeModel _textModel;
   static bool _isInitialized = false;
 
   static String get assistantModelLabel => 'Gemini 3.1 Pro';
@@ -157,21 +166,24 @@ class AIService {
       return;
     }
 
-    _apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
-
-    if (_apiKey.isNotEmpty && _apiKey != _placeholderApiKey) {
-      _visionModel = GenerativeModel(model: _modelName, apiKey: _apiKey);
-      _textModel = GenerativeModel(model: _modelName, apiKey: _apiKey);
-    }
-
     _isInitialized = true;
   }
 
   static Future<MedicineScanResult?> analyzeMedicineImage(
     File imageFile,
   ) async {
-    if (_apiKey.isEmpty || _apiKey == _placeholderApiKey) {
-      throw Exception('Lutfen .env dosyasina Gemini API anahtarinizi girin.');
+    if (!BackendService.isInitialized || BackendService.currentUser == null) {
+      throw Exception('AI tarama icin hesabinizla giris yapin.');
+    }
+
+    final hasQuota = await HiveService.tryConsumeDailyQuota(
+      featureKey: _scanQuotaKey,
+      dailyLimit: _scanDailyLimit,
+    );
+    if (!hasQuota) {
+      throw const AIQuotaExceededException(
+        'Gunluk ilac tarama limiti doldu (10/gun). Yarin tekrar deneyin.',
+      );
     }
 
     try {
@@ -179,14 +191,14 @@ class AIService {
       final ocrText = await OcrService.extractTextFromImage(imageFile);
       final parsedFromOcr = _parseOcrText(ocrText);
 
-      final response = await _visionModel.generateContent([
-        Content.multi([
-          TextPart(_buildVisionPrompt(ocrText)),
-          DataPart('image/jpeg', imageBytes),
-        ]),
-      ]);
+      final responseText = await _invokeGeminiProxy({
+        'type': 'scan',
+        'imageBase64': base64Encode(imageBytes),
+        'mimeType': 'image/jpeg',
+        'ocrText': ocrText,
+      });
 
-      final parsedFromAi = _parseStructuredResponse(response.text ?? '');
+      final parsedFromAi = _parseStructuredResponse(responseText);
       final fields = _mergeSuggestions(parsedFromOcr, parsedFromAi);
 
       return fields.isEmpty
@@ -194,36 +206,54 @@ class AIService {
           : MedicineScanResult(ocrText: ocrText, fields: fields);
     } catch (e) {
       print('AI Image Analysis Error: $e');
+      final friendlyMessage = _friendlyProxyError(e);
+      if (friendlyMessage != null) {
+        throw AIQuotaExceededException(friendlyMessage);
+      }
       throw Exception('Ilac resmi analiz edilemedi: $e');
     }
   }
 
-  static String _buildVisionPrompt(String ocrText) {
-    final normalizedText =
-        ocrText.trim().isEmpty ? 'OCR bos veya okunamadi.' : ocrText;
+  static Future<String> _invokeGeminiProxy(Map<String, dynamic> body) async {
+    final supabase = BackendService.client;
+    if (supabase == null) {
+      throw StateError(
+        'AI servisi su an hazir degil. Lutfen daha sonra tekrar deneyin.',
+      );
+    }
 
-    return '''
-Bu bir ilac kutusu, recete ya da prospektus fotografi.
-Elindeki iki kaynak var:
-1. Goruntunun kendisi
-2. OCR ile cikarilmis ham metin
+    final response = await supabase.functions.invoke(
+      _proxyFunctionName,
+      body: body,
+    );
+    final data = response.data;
+    if (data is Map && data['text'] is String) {
+      return data['text'] as String;
+    }
+    if (data is String && data.trim().isNotEmpty) {
+      return data;
+    }
+    throw StateError('Gemini proxy beklenen metin yanitini dondurmedi.');
+  }
 
-Once OCR metnini kullan, sonra goruntuyle dogrula.
-Kesin olmayan bilgileri tahmin etme. Emin degilsen "Belirsiz" yaz.
-Ilac adini mumkun oldugunca marka veya urun adi olarak bul.
-Kullanim metninden sabah, ogle, aksam, tok, ac, gunde kac kez, haftada bir, ayda bir gibi bilgileri yakala.
+  static String? _friendlyProxyError(Object error) {
+    if (error is! FunctionException) {
+      return null;
+    }
 
-OCR METNI:
-$normalizedText
+    final details = error.details;
+    if (error.status == 401) {
+      return 'AI ozellikleri icin hesabinizla giris yapin.';
+    }
 
-Yaniti yalnizca su formatta ver:
-ISIM: [deger]
-FORM: [Hap|Surup|Igne|Damla|Krem|Sprey|Diger|Belirsiz]
-DOZ: [deger]
-SIKLIK: [sayi veya Belirsiz]
-YEMEK: [Tok|Ac|Farketmez|Belirsiz]
-KULLANIM: [sabah/ogle/aksam/haftada bir/ayda bir gibi notlar]
-''';
+    if (error.status == 429 && details is Map) {
+      final type = details['type'] == 'scan' ? 'tarama' : 'asistan';
+      final limit = details['limit'];
+      return 'Gunluk AI $type limiti doldu'
+          '${limit is int ? ' ($limit/gun)' : ''}. Yarin tekrar deneyin.';
+    }
+
+    return null;
   }
 
   static Map<String, String> _parseStructuredResponse(String text) {
@@ -389,10 +419,8 @@ KULLANIM: [sabah/ogle/aksam/haftada bir/ayda bir gibi notlar]
   }
 
   static bool _normalizedCompare(String a, String b) {
-    String normalize(String value) => value
-        .toLowerCase()
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim();
+    String normalize(String value) =>
+        value.toLowerCase().replaceAll(RegExp(r'\s+'), ' ').trim();
 
     return normalize(a) == normalize(b);
   }
@@ -486,7 +514,7 @@ KULLANIM: [sabah/ogle/aksam/haftada bir/ayda bir gibi notlar]
     required AssistantScenario scenario,
   }) {
     return '''
-Sen MediTrack uygulamasinin AI saglik asistanisin.
+Sen Dozara uygulamasinin AI saglik asistanisin.
 
 Kullanici profili:
 - Isim: ${context.userName}
@@ -665,8 +693,8 @@ $question
           'Ozellikle kan sulandirici, seker ilaci ve tansiyon ilaclarinda dikkatli olun.',
           'Yeni ilac eklenince doktor veya eczaciya kombinasyonu sorun.',
         ],
-        disclaimer:
-            error ?? 'Kesin etkilesim degerlendirmesi icin doktorunuza veya eczaciniza danisin.',
+        disclaimer: error ??
+            'Kesin etkilesim degerlendirmesi icin doktorunuza veya eczaciniza danisin.',
         quickReplies: [
           'Yan etki riski var mi?',
           'Hangi ilaci hangi saatte almaliyim?',
@@ -683,8 +711,8 @@ $question
         'Aktif ilac sayisi: ${context.medicines.length}',
         'Bu haftaki uyum: %${context.complianceRate}',
       ],
-      disclaimer:
-          error ?? 'Detayli tibbi yonlendirme icin doktorunuza veya eczaciniza danisin.',
+      disclaimer: error ??
+          'Detayli tibbi yonlendirme icin doktorunuza veya eczaciniza danisin.',
       quickReplies: [
         '$focusedName ne ise yarar?',
         'Bu haftayi ozetle',
@@ -697,11 +725,23 @@ $question
     required AssistantContext context,
     AssistantScenario scenario = AssistantScenario.medicineInfo,
   }) async {
-    if (_apiKey.isEmpty || _apiKey == _placeholderApiKey) {
+    if (!BackendService.isInitialized || BackendService.currentUser == null) {
       return _fallbackAssistantResponse(
         question,
         context,
-        error: 'Gemini yaniti icin .env dosyasina API anahtari eklenmeli.',
+        error: 'AI asistani kullanmak icin hesabinizla giris yapin.',
+      );
+    }
+
+    final hasQuota = await HiveService.tryConsumeDailyQuota(
+      featureKey: _assistantQuotaKey,
+      dailyLimit: _assistantDailyLimit,
+    );
+    if (!hasQuota) {
+      return _fallbackAssistantResponse(
+        question,
+        context,
+        error: 'Gunluk asistan limiti doldu (20/gun). Yarin tekrar deneyin.',
       );
     }
 
@@ -711,14 +751,17 @@ $question
         context: context,
         scenario: scenario,
       );
-      final response = await _textModel.generateContent([Content.text(prompt)]);
-      return _parseAssistantResponse(response.text ?? '');
+      final responseText = await _invokeGeminiProxy({
+        'type': 'assistant',
+        'prompt': prompt,
+      });
+      return _parseAssistantResponse(responseText);
     } catch (e) {
       print('AI Assistant Structured Error: $e');
       return _fallbackAssistantResponse(
         question,
         context,
-        error: 'Asistan yaniti alinamadi: $e',
+        error: _friendlyProxyError(e) ?? 'Asistan yaniti alinamadi: $e',
       );
     }
   }

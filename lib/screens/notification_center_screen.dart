@@ -780,7 +780,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'MediTrack',
+                          'Dozara',
                           style: GoogleFonts.nunito(
                             fontSize: 12,
                             fontWeight: FontWeight.w800,

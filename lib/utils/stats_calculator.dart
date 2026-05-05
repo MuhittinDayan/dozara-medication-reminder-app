@@ -65,24 +65,6 @@ class InsightSuggestion {
 }
 
 class StatsCalculator {
-  static const List<double> demoWeeklyData = [
-    0.9,
-    0.4,
-    1.0,
-    0.2,
-    0.8,
-    0.7,
-    0.0,
-  ];
-
-  static const List<double> demoHeatmapPattern = [
-    0.9, 0.0, 1.0, 0.8, 0.6, 1.0, 0.7,
-    0.4, 1.0, 0.9, 0.0, 1.0, 0.8, 0.5,
-    1.0, 0.7, 0.9, 0.4, 1.0, 0.0, 0.8,
-    0.6, 1.0, 0.9, 0.7, 0.4, 1.0, 0.8,
-    0.9, 0.7, 1.0, 0.0, 0.8, 0.6, 1.0,
-  ];
-
   static List<DoseLog> logsForDays(List<DoseLog> logs, int days) {
     final start = DateTime.now().subtract(Duration(days: days - 1));
     final startDate = DateTime(start.year, start.month, start.day);
@@ -112,11 +94,8 @@ class StatsCalculator {
     return ((taken / logs.length) * 100).round();
   }
 
-  static int overallPercent(List<Medicine> medicines, List<DoseLog> logs90Days) {
-    if (medicines.isEmpty) {
-      final average = demoWeeklyData.reduce((a, b) => a + b) / demoWeeklyData.length;
-      return (average * 100).round();
-    }
+  static int overallPercent(
+      List<Medicine> medicines, List<DoseLog> logs90Days) {
     return adherenceRate(logsForDays(logs90Days, 7));
   }
 
@@ -126,37 +105,13 @@ class StatsCalculator {
         .toList(growable: false);
   }
 
-  static List<DaySummary> dailySummariesFromRates(List<double> rates) {
-    final startDate = rates.length == 7
-        ? startOfCurrentWeek()
-        : DateTime.now().subtract(Duration(days: rates.length - 1));
-    return List.generate(rates.length, (index) {
-      final date = DateTime(
-        startDate.year,
-        startDate.month,
-        startDate.day,
-      ).add(Duration(days: index));
-      final normalizedRate = rates[index].clamp(0.0, 1.0);
-      const total = 10;
-      final taken = (normalizedRate * total).round();
-
-      return DaySummary(
-        date: date,
-        total: total,
-        taken: taken,
-        missed: total - taken,
-        rate: (normalizedRate * 100).round(),
-      );
-    });
-  }
-
   static List<DaySummary> dailySummaries(List<DoseLog> logs, int days) {
     final today = DateTime.now();
     final startDate = days == 7
         ? startOfCurrentWeek()
         : DateTime(today.year, today.month, today.day)
             .subtract(Duration(days: days - 1));
-            
+
     return List.generate(days, (index) {
       final date = DateTime(
         startDate.year,
@@ -165,8 +120,10 @@ class StatsCalculator {
       ).add(Duration(days: index));
       final dayLogs = logs.where((log) => isSameDay(log.scheduledTime, date));
       final total = dayLogs.length;
-      final taken = dayLogs.where((log) => log.status == DoseStatus.taken).length;
-      final missed = dayLogs.where((log) => log.status == DoseStatus.missed).length;
+      final taken =
+          dayLogs.where((log) => log.status == DoseStatus.taken).length;
+      final missed =
+          dayLogs.where((log) => log.status == DoseStatus.missed).length;
       final rate = total == 0 ? 0 : ((taken / total) * 100).round();
 
       return DaySummary(
@@ -203,11 +160,12 @@ class StatsCalculator {
 
     for (var i = 0; i < 365; i++) {
       final day = today.subtract(Duration(days: i));
-      final dayLogs = logs.where((log) =>
-        log.scheduledTime.year == day.year &&
-        log.scheduledTime.month == day.month &&
-        log.scheduledTime.day == day.day
-      ).toList();
+      final dayLogs = logs
+          .where((log) =>
+              log.scheduledTime.year == day.year &&
+              log.scheduledTime.month == day.month &&
+              log.scheduledTime.day == day.day)
+          .toList();
 
       if (dayLogs.isEmpty) break;
 
@@ -256,22 +214,10 @@ class StatsCalculator {
           .subtract(Duration(days: days - 1 - index));
       final dayLogs = logs.where((log) => isSameDay(log.scheduledTime, date));
       final total = dayLogs.length;
-      final taken = dayLogs.where((log) => log.status == DoseStatus.taken).length;
+      final taken =
+          dayLogs.where((log) => log.status == DoseStatus.taken).length;
       final rate = total == 0 ? 0 : ((taken / total) * 100).round();
       return HeatCell(date: date, rate: rate);
-    });
-  }
-
-  static List<HeatCell> demoHeatmapData(int days) {
-    final today = DateTime.now();
-    return List.generate(days, (index) {
-      final date = DateTime(today.year, today.month, today.day)
-          .subtract(Duration(days: days - 1 - index));
-      final value = demoHeatmapPattern[index % demoHeatmapPattern.length];
-      return HeatCell(
-        date: date,
-        rate: (value.clamp(0.0, 1.0) * 100).round(),
-      );
     });
   }
 
@@ -282,7 +228,9 @@ class StatsCalculator {
     required String summaryPrefix,
     required String improvementPrefix,
   }) {
-    final missedLogs = logs.where((log) => log.status == DoseStatus.missed).toList(growable: false);
+    final missedLogs = logs
+        .where((log) => log.status == DoseStatus.missed)
+        .toList(growable: false);
     if (missedLogs.isEmpty || medicines.isEmpty) {
       return InsightSuggestion(
         title: title,
@@ -296,14 +244,20 @@ class StatsCalculator {
     final slotCount = <DoseSlot, int>{};
 
     for (final log in missedLogs) {
-      weekdayCount.update(log.scheduledTime.weekday, (v) => v + 1, ifAbsent: () => 1);
+      weekdayCount.update(log.scheduledTime.weekday, (v) => v + 1,
+          ifAbsent: () => 1);
       medicineCount.update(log.medicineId, (v) => v + 1, ifAbsent: () => 1);
-      slotCount.update(doseSlot(timeFromDateTime(log.scheduledTime)), (v) => v + 1, ifAbsent: () => 1);
+      slotCount.update(
+          doseSlot(timeFromDateTime(log.scheduledTime)), (v) => v + 1,
+          ifAbsent: () => 1);
     }
 
-    final weakWeekday = weekdayCount.entries.reduce((a, b) => a.value >= b.value ? a : b);
-    final weakMedicineId = medicineCount.entries.reduce((a, b) => a.value >= b.value ? a : b);
-    final weakSlot = slotCount.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+    final weakWeekday =
+        weekdayCount.entries.reduce((a, b) => a.value >= b.value ? a : b);
+    final weakMedicineId =
+        medicineCount.entries.reduce((a, b) => a.value >= b.value ? a : b);
+    final weakSlot =
+        slotCount.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
 
     final medicine = medicines.firstWhere(
       (m) => m.id == weakMedicineId.key,
@@ -320,7 +274,8 @@ class StatsCalculator {
 
     return InsightSuggestion(
       title: title,
-      body: '${weekdayLong(weakWeekday.key)} ${slotLabel(weakSlot)} dozlarında ${medicine.name} $summaryPrefix Alarmı ${timeToString(suggestedTime)} saatine çekebilirim.',
+      body:
+          '${weekdayLong(weakWeekday.key)} ${slotLabel(weakSlot)} dozlarında ${medicine.name} $summaryPrefix Alarmı ${timeToString(suggestedTime)} saatine çekebilirim.',
       actionLabel: 'Evet, ayarla',
       targetMedicineId: medicine.id,
       recommendedTime: suggestedTime,
@@ -330,27 +285,43 @@ class StatsCalculator {
 
   static String weekdayShort(DateTime date) {
     switch (date.weekday) {
-      case DateTime.monday: return 'Pt';
-      case DateTime.tuesday: return 'Sa';
-      case DateTime.wednesday: return 'Ça';
-      case DateTime.thursday: return 'Pe';
-      case DateTime.friday: return 'Cu';
-      case DateTime.saturday: return 'Ct';
-      case DateTime.sunday: return 'Pz';
-      default: return '';
+      case DateTime.monday:
+        return 'Pt';
+      case DateTime.tuesday:
+        return 'Sa';
+      case DateTime.wednesday:
+        return 'Ça';
+      case DateTime.thursday:
+        return 'Pe';
+      case DateTime.friday:
+        return 'Cu';
+      case DateTime.saturday:
+        return 'Ct';
+      case DateTime.sunday:
+        return 'Pz';
+      default:
+        return '';
     }
   }
 
   static String weekdayLong(int weekday) {
     switch (weekday) {
-      case DateTime.monday: return 'Pazartesi';
-      case DateTime.tuesday: return 'Salı';
-      case DateTime.wednesday: return 'Çarşamba';
-      case DateTime.thursday: return 'Perşembe';
-      case DateTime.friday: return 'Cuma';
-      case DateTime.saturday: return 'Cumartesi';
-      case DateTime.sunday: return 'Pazar';
-      default: return 'Bu gün';
+      case DateTime.monday:
+        return 'Pazartesi';
+      case DateTime.tuesday:
+        return 'Salı';
+      case DateTime.wednesday:
+        return 'Çarşamba';
+      case DateTime.thursday:
+        return 'Perşembe';
+      case DateTime.friday:
+        return 'Cuma';
+      case DateTime.saturday:
+        return 'Cumartesi';
+      case DateTime.sunday:
+        return 'Pazar';
+      default:
+        return 'Bu gün';
     }
   }
 
@@ -371,7 +342,8 @@ class StatsCalculator {
   }
 
   static TimeOfDay shiftTime(TimeOfDay time, int minutes) {
-    final total = ((time.hour * 60) + time.minute + minutes).clamp(5 * 60, (23 * 60) + 59);
+    final total = ((time.hour * 60) + time.minute + minutes)
+        .clamp(5 * 60, (23 * 60) + 59);
     return TimeOfDay(hour: total ~/ 60, minute: total % 60);
   }
 

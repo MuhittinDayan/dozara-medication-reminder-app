@@ -8,14 +8,14 @@ import '../../utils/stats_calculator.dart';
 class WeeklyBarChart extends StatelessWidget {
   final List<double> weeklyData;
   final List<DaySummary> daySummaries;
-  final bool isUsingDemoData;
+  final bool hasData;
   final bool isDark;
 
   const WeeklyBarChart({
     super.key,
     required this.weeklyData,
     required this.daySummaries,
-    required this.isUsingDemoData,
+    required this.hasData,
     required this.isDark,
   });
 
@@ -54,7 +54,7 @@ class WeeklyBarChart extends StatelessWidget {
               ),
             ],
           ),
-          if (isUsingDemoData) ...[
+          if (!hasData) ...[
             const SizedBox(height: 10),
             Container(
               width: double.infinity,
@@ -64,7 +64,7 @@ class WeeklyBarChart extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                '✦ İlaç ekledikçe gerçek veriler burada görünecek',
+                'Ilac plani olusturduktan sonra gercek uyum verileri burada gorunecek.',
                 style: GoogleFonts.nunito(
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
@@ -113,11 +113,14 @@ class WeeklyBarChart extends StatelessWidget {
                         return Padding(
                           padding: const EdgeInsets.only(top: 8),
                           child: Text(
-                            StatsCalculator.weekdayShort(daySummaries[index].date),
+                            StatsCalculator.weekdayShort(
+                                daySummaries[index].date),
                             style: GoogleFonts.nunito(
                               fontSize: 10,
                               fontWeight: FontWeight.w800,
-                              color: isDark ? Colors.white : AppTheme.textSecondary,
+                              color: isDark
+                                  ? Colors.white
+                                  : AppTheme.textSecondary,
                             ),
                           ),
                         );

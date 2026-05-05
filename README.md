@@ -20,7 +20,7 @@ Flutter ile gelistirilmis, cok profilli bir ilac takip ve hatirlatma uygulamasi.
 - flutter_local_notifications
 - local_auth
 - flutter_secure_storage
-- google_generative_ai
+- Supabase Edge Functions
 
 ## Kurulum
 
@@ -30,13 +30,16 @@ Flutter ile gelistirilmis, cok profilli bir ilac takip ve hatirlatma uygulamasi.
 flutter pub get
 ```
 
-2. AI ozelliklerini kullanacaksan proje kokune `.env` dosyasi ekle:
+2. Supabase baglantisi icin proje kokune `.env` dosyasi ekle:
 
 ```env
-GEMINI_API_KEY=your_api_key_here
+SUPABASE_URL=https://project-ref.supabase.co
+SUPABASE_ANON_KEY=your_anon_key_here
 ```
 
-`.env` dosyasi zorunlu degildir. Dosya yoksa uygulama acilir; sadece AI ozellikleri devre disi kalir.
+Gemini API anahtari Flutter `.env` dosyasina konmaz. AI ozellikleri
+`supabase/functions/gemini-proxy` uzerinden calisir ve `GEMINI_API_KEY`
+Supabase secret olarak saklanir.
 
 3. Uygulamayi calistir:
 

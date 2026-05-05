@@ -40,12 +40,23 @@ class NotificationService {
       onDidReceiveNotificationResponse: _onNotificationResponse,
     );
 
+    _initialized = true;
+  }
+
+  static Future<void> requestNotificationPermission() async {
     await _notifications
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
         ?.requestNotificationsPermission();
 
-    _initialized = true;
+    await _notifications
+        .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin>()
+        ?.requestPermissions(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
   }
 
   static int _notificationId(String doseLogId) =>
@@ -234,7 +245,7 @@ class NotificationService {
   static Future<void> showDailySummaryNow() async {
     final today = DateTime.now();
     final logs = HiveService.getDoseLogsForDate(today);
-    
+
     final taken = logs.where((l) => l.status == DoseStatus.taken).length;
     final missed = logs.where((l) => l.status == DoseStatus.missed).length;
     final total = logs.length;
@@ -243,7 +254,7 @@ class NotificationService {
     final String body;
 
     if (total == 0) {
-      return; 
+      return;
     } else if (taken == total) {
       title = '🎉 Harika gün!';
       body = 'Bugün $total dozun tamamını aldın. Serini koruyorsun!';
@@ -252,7 +263,8 @@ class NotificationService {
       body = '$total dozun tamamı atlandı. Sağlığın için dikkat et.';
     } else {
       title = '💊 Günlük özet';
-      body = '$taken/$total doz alındı${missed > 0 ? ', $missed doz atlandı' : ''}.';
+      body =
+          '$taken/$total doz alındı${missed > 0 ? ', $missed doz atlandı' : ''}.';
     }
 
     await _notifications.show(

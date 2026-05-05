@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
 
@@ -14,6 +17,7 @@ class HiveService {
   static const String _profileBoxName = 'profiles';
   static const String _settingsBoxName = 'settings';
   static const String _activeProfileIdKey = 'activeProfileId';
+  static const String _encryptionKeyStorageKey = 'hive_encryption_key';
   static const String _themeModeKey = 'themeMode';
   static const String _defaultThemeMode = 'system';
   static const String _onboardingCompletedKey = 'onboardingCompleted';
@@ -24,6 +28,8 @@ class HiveService {
   static const String _familyNotificationKey = 'familyNotification';
   static const String _disabledAlarmKeysKey = 'disabledAlarmKeys';
   static const String _geminiManagedAlarmKeysKey = 'geminiManagedAlarmKeys';
+  static const String _dailyQuotaDatePrefix = 'dailyQuotaDate';
+  static const String _dailyQuotaCountPrefix = 'dailyQuotaCount';
 
   static late Box<Medicine> _medicineBox;
   static late Box<DoseLog> _doseLogBox;
@@ -98,7 +104,72 @@ class HiveService {
     }
   }
 
-  /// Hive kutularını aç
+  /// Güvenli depodan şifreleme anahtarını okur; yoksa yeni üretir.
+  static Future<HiveAesCipher> _getOrCreateCipher() async {
+    const secureStorage = FlutterSecureStorage(
+      aOptions: AndroidOptions(encryptedSharedPreferences: true),
+      iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
+    );
+
+    final existingKeyB64 =
+        await secureStorage.read(key: _encryptionKeyStorageKey);
+    if (existingKeyB64 != null) {
+      final keyBytes = base64Url.decode(existingKeyB64);
+      return HiveAesCipher(keyBytes);
+    }
+
+    // İlk çalışma: 32 byte'lık kriptografik anahtar üret
+    final newKey = Hive.generateSecureKey();
+    await secureStorage.write(
+      key: _encryptionKeyStorageKey,
+      value: base64Url.encode(newKey),
+    );
+    debugPrint(
+        'HiveService: Yeni şifreleme anahtarı üretildi ve güvenli depoya kaydedildi.');
+    return HiveAesCipher(newKey);
+  }
+
+  static String _todayKey() {
+    final now = DateTime.now();
+    return '${now.year.toString().padLeft(4, '0')}-'
+        '${now.month.toString().padLeft(2, '0')}-'
+        '${now.day.toString().padLeft(2, '0')}';
+  }
+
+  /// Şifrelenmemiş eski bir box'ı veri kaybetmeden şifreli formata taşır.
+  static Future<Box<T>> _openEncryptedBox<T>(
+    String name,
+    HiveAesCipher cipher,
+  ) async {
+    try {
+      return await Hive.openBox<T>(name, encryptionCipher: cipher);
+    } catch (openError) {
+      try {
+        debugPrint(
+          'HiveService: "$name" box eski şifresiz formattan taşınıyor.',
+        );
+        final legacyBox = await Hive.openBox<T>(name);
+        final legacyEntries = Map<dynamic, T>.from(legacyBox.toMap());
+        await legacyBox.close();
+
+        await Hive.deleteBoxFromDisk(name);
+        final encryptedBox =
+            await Hive.openBox<T>(name, encryptionCipher: cipher);
+        if (legacyEntries.isNotEmpty) {
+          await encryptedBox.putAll(legacyEntries);
+        }
+        return encryptedBox;
+      } catch (migrationError) {
+        throw StateError(
+          'Hive "$name" box şifreli açılamadı ve otomatik migrasyon '
+          'tamamlanamadı. İlk hata: $openError. Migrasyon hatası: '
+          '$migrationError',
+        );
+      }
+    }
+  }
+
+  /// Hive kutularını AES şifrelemeli aç
   static Future<void> init() async {
     if (_isInitialized) {
       return;
@@ -106,10 +177,12 @@ class HiveService {
 
     registerAdapters();
 
-    _medicineBox = await Hive.openBox<Medicine>(_medicineBoxName);
-    _doseLogBox = await Hive.openBox<DoseLog>(_doseLogBoxName);
-    _profileBox = await Hive.openBox<Profile>(_profileBoxName);
-    _settingsBox = await Hive.openBox(_settingsBoxName);
+    final cipher = await _getOrCreateCipher();
+
+    _medicineBox = await _openEncryptedBox<Medicine>(_medicineBoxName, cipher);
+    _doseLogBox = await _openEncryptedBox<DoseLog>(_doseLogBoxName, cipher);
+    _profileBox = await _openEncryptedBox<Profile>(_profileBoxName, cipher);
+    _settingsBox = await _openEncryptedBox(_settingsBoxName, cipher);
 
     await _ensureProfileState();
     _isInitialized = true;
@@ -308,6 +381,32 @@ class HiveService {
   static Future<void> setFamilyNotificationEnabled(bool value) async {
     _ensureInitialized();
     await _settingsBox.put(_familyNotificationKey, value);
+  }
+
+  static Future<bool> tryConsumeDailyQuota({
+    required String featureKey,
+    required int dailyLimit,
+  }) async {
+    _ensureInitialized();
+    if (dailyLimit <= 0) {
+      return false;
+    }
+
+    final today = _todayKey();
+    final dateKey = '$_dailyQuotaDatePrefix.$featureKey';
+    final countKey = '$_dailyQuotaCountPrefix.$featureKey';
+    final storedDate = _settingsBox.get(dateKey) as String?;
+    final storedCount = _settingsBox.get(countKey, defaultValue: 0);
+    final currentCount =
+        storedDate == today && storedCount is int ? storedCount : 0;
+
+    if (currentCount >= dailyLimit) {
+      return false;
+    }
+
+    await _settingsBox.put(dateKey, today);
+    await _settingsBox.put(countKey, currentCount + 1);
+    return true;
   }
 
   static bool isAlarmEnabled(String medicineId, String time) {
@@ -864,7 +963,8 @@ class HiveService {
 
     final now = DateTime.now();
     final testTime = now.add(const Duration(minutes: 2));
-    final hhmm = '${testTime.hour.toString().padLeft(2, '0')}:${testTime.minute.toString().padLeft(2, '0')}';
+    final hhmm =
+        '${testTime.hour.toString().padLeft(2, '0')}:${testTime.minute.toString().padLeft(2, '0')}';
 
     final testMedicine = Medicine(
       id: _uuid.v4(),
@@ -885,7 +985,7 @@ class HiveService {
 
     await addMedicine(testMedicine);
     await syncDoseLogs();
-    
+
     await NotificationService.rescheduleAllNotifications();
     await _notifyLocalDataChanged();
   }

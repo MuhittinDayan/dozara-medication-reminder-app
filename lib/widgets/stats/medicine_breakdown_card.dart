@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../theme/app_theme.dart';
-import '../../models/medicine.dart';
 import '../../models/dose_log.dart';
+import '../../models/medicine.dart';
+import '../../theme/app_theme.dart';
 import '../../utils/stats_calculator.dart';
 
 class MedicineBreakdownCard extends StatelessWidget {
@@ -22,155 +22,70 @@ class MedicineBreakdownCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (medicines.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isDark ? AppTheme.darkCard : Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: isDark ? AppTheme.darkBorder : AppTheme.borderColor,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  'İlaç Bazlı Dağılım',
-                  style: GoogleFonts.nunito(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900,
-                    color: isDark ? Colors.white : AppTheme.textPrimary,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  trailing,
-                  style: GoogleFonts.nunito(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.primaryColor,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'İlaç ekledikten sonra her ilacın uyum detayı burada görünecek',
-              style: GoogleFonts.nunito(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                height: 1.4,
-                color: isDark ? const Color(0xFFC4B7E9) : AppTheme.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.05)
-                    : AppTheme.backgroundSecondary,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Örnek ilaç',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.nunito(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w900,
-                        color: isDark ? Colors.white : AppTheme.textPrimary,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    '████░░█',
-                    style: GoogleFonts.nunito(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
-                      color: AppTheme.primaryColor,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    '%71',
-                    style: GoogleFonts.nunito(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w900,
-                      color: AppTheme.primaryColor,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
     final medicineStats = medicines
         .map((medicine) => StatsCalculator.buildMedicineStat(medicine, logs))
         .toList(growable: false)
       ..sort((a, b) => b.volume.compareTo(a.volume));
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: isDark ? AppTheme.darkCard : Colors.white,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: isDark ? AppTheme.darkBorder : AppTheme.borderColor,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.darkCard : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isDark ? AppTheme.darkBorder : AppTheme.borderColor,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  Text(
-                    'İlaç Bazlı Dağılım',
-                    style: GoogleFonts.nunito(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w900,
-                      color: isDark ? Colors.white : AppTheme.textPrimary,
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    trailing,
-                    style: GoogleFonts.nunito(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: AppTheme.primaryColor,
-                    ),
-                  ),
-                ],
+              Text(
+                'Ilac Bazli Dagilim',
+                style: GoogleFonts.nunito(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                  color: isDark ? Colors.white : AppTheme.textPrimary,
+                ),
               ),
-              const SizedBox(height: 12),
-              ...medicineStats.map(
-                (item) => Padding(
-                  padding: EdgeInsets.only(
-                    bottom: item == medicineStats.last ? 0 : 10,
-                  ),
-                  child: _buildMedicineBreakdownRow(
-                    stat: item,
-                    isDark: isDark,
-                  ),
+              const Spacer(),
+              Text(
+                trailing,
+                style: GoogleFonts.nunito(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.primaryColor,
                 ),
               ),
             ],
           ),
-        ),
-      ],
+          const SizedBox(height: 12),
+          if (medicineStats.isEmpty)
+            Text(
+              'Ilac ekledikten sonra her ilacin uyum detayi burada gorunecek.',
+              style: GoogleFonts.nunito(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                height: 1.4,
+                color:
+                    isDark ? const Color(0xFFC4B7E9) : AppTheme.textSecondary,
+              ),
+            )
+          else
+            ...medicineStats.map(
+              (item) => Padding(
+                padding: EdgeInsets.only(
+                  bottom: item == medicineStats.last ? 0 : 10,
+                ),
+                child: _buildMedicineBreakdownRow(
+                  stat: item,
+                  isDark: isDark,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -234,7 +149,8 @@ class MedicineBreakdownCard extends StatelessWidget {
             style: GoogleFonts.nunito(
               fontSize: 12,
               fontWeight: FontWeight.w900,
-              color: stat.rate < 60 ? AppTheme.errorColor : AppTheme.primaryColor,
+              color:
+                  stat.rate < 60 ? AppTheme.errorColor : AppTheme.primaryColor,
             ),
           ),
         ),

@@ -5,6 +5,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 import 'cubit/profile_cubit.dart';
 import 'data/backend/backend_service.dart';
@@ -15,12 +16,18 @@ import 'screens/onboarding_screen.dart';
 import 'services/ai_service.dart';
 import 'services/hive_service.dart';
 import 'services/notification_service.dart';
+import 'services/family_notification_service.dart';
+import 'services/widget_service.dart';
 import 'theme/app_theme.dart';
 
 void main() async {
   final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
   await dotenv.load(fileName: '.env', isOptional: true);
+  
+  // Firebase'i baslat
+  await Firebase.initializeApp();
+  
   await BackendService.init();
   await initializeDateFormatting('tr_TR', null);
 
@@ -31,6 +38,14 @@ void main() async {
 
   await NotificationService.init();
   AIService.init();
+  
+  // Aile bildirimlerini baslat
+  await FamilyNotificationService.init();
+  
+  // Widget servisini baslat
+  await WidgetService.init();
+  await WidgetService.updateWidget();
+  
   await HiveService.syncDoseLogs();
   await SyncService.syncNow();
   HiveService.onLocalDataChanged = SyncService.pushLocalSnapshot;

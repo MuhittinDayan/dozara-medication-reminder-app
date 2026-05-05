@@ -26,18 +26,18 @@ class BackendService {
     final url = dotenv.maybeGet(supabaseUrlKey)?.trim() ?? '';
     final anonKey = dotenv.maybeGet(supabaseAnonKey)?.trim() ?? '';
     if (url.isEmpty || anonKey.isEmpty) {
-      return 'SUPABASE_URL ve SUPABASE_ANON_KEY .env dosyasinda olmali.';
+      return 'Hesap ve yedekleme servisi su an hazir degil.';
     }
 
     final uri = Uri.tryParse(url);
     if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
-      return 'SUPABASE_URL gecersiz gorunuyor.';
+      return 'Hesap ve yedekleme servisi ayari gecersiz gorunuyor.';
     }
     if (uri.host == 'supabase.com' || uri.path.contains('/dashboard/')) {
-      return 'SUPABASE_URL Dashboard linki degil, https://proje-ref.supabase.co formatinda olmali.';
+      return 'Hesap ve yedekleme servisi ayari gecersiz gorunuyor.';
     }
     if (!uri.host.endsWith('.supabase.co')) {
-      return 'SUPABASE_URL https://proje-ref.supabase.co formatinda olmali.';
+      return 'Hesap ve yedekleme servisi ayari gecersiz gorunuyor.';
     }
 
     return null;
@@ -57,16 +57,60 @@ class BackendService {
   static Stream<AuthState>? get authStateChanges =>
       client?.auth.onAuthStateChange;
 
+  static String? validateEmailAndPassword({
+    required String email,
+    required String password,
+  }) {
+    final trimmedEmail = email.trim();
+    if (trimmedEmail.isEmpty) {
+      return 'E-posta adresini yazmalisin.';
+    }
+
+    if (password.length < 6) {
+      return 'Sifre en az 6 karakter olmali.';
+    }
+
+    final emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+    if (!emailPattern.hasMatch(trimmedEmail)) {
+      return 'E-posta adresi hatali gorunuyor. Ornek: adiniz@gmail.com';
+    }
+
+    final domain = trimmedEmail.split('@').last.toLowerCase();
+    const suggestions = <String, String>{
+      'gmai.com': 'gmail.com',
+      'gmial.com': 'gmail.com',
+      'gmail.con': 'gmail.com',
+      'hotmial.com': 'hotmail.com',
+      'hotmai.com': 'hotmail.com',
+      'outlok.com': 'outlook.com',
+    };
+    final suggestion = suggestions[domain];
+    if (suggestion != null) {
+      return 'E-posta adresini kontrol et: "$suggestion" mu demek istedin?';
+    }
+
+    return null;
+  }
+
   static String friendlyAuthError(Object error) {
     final message = error.toString();
     if (message.contains('DOCTYPE') || message.contains('Failed to decode')) {
-      return 'Supabase URL hatali gorunuyor. .env icindeki SUPABASE_URL https://proje-ref.supabase.co formatinda olmali.';
+      return 'Hesap servisi su an yanit vermiyor. Lutfen daha sonra tekrar deneyin.';
     }
     if (message.contains('Invalid login credentials')) {
       return 'E-posta veya sifre hatali.';
     }
+    if (message.contains('invalid_email') ||
+        message.contains('Unable to validate email address') ||
+        message.contains('Email address') && message.contains('invalid')) {
+      return 'E-posta adresi gecersiz gorunuyor. Adresi kontrol edip tekrar dene.';
+    }
     if (message.contains('User already registered')) {
       return 'Bu e-posta ile zaten hesap var. Giris yapmayi deneyin.';
+    }
+    if (message.contains('Email signups are disabled') ||
+        message.contains('email_provider_disabled')) {
+      return 'E-posta ile hesap olusturma su an kapali. Lutfen daha sonra tekrar deneyin.';
     }
     if (message.contains('over_email_send_rate_limit') ||
         message.contains('email rate limit exceeded') ||
@@ -74,7 +118,7 @@ class BackendService {
       return 'E-posta gonderim limiti doldu. Hesap olusmus olabilir; Giris yap sekmesini deneyin veya birkac dakika sonra tekrar deneyin.';
     }
     if (message.contains('Email not confirmed')) {
-      return 'E-posta onayi bekleniyor. Gelen kutusundaki Supabase onay linkine tiklayin.';
+      return 'E-posta onayi bekleniyor. Gelen kutusundaki onay linkine tiklayin.';
     }
 
     return message.replaceFirst(RegExp(r'^[^:]+Exception:?\s*'), '');

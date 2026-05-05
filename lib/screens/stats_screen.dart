@@ -26,10 +26,6 @@ class _StatsScreenState extends State<StatsScreen> with WidgetsBindingObserver {
   bool _isGeneratingPdf = false;
   bool _isApplyingInsight = false;
 
-  
-
-  
-
   @override
   void initState() {
     super.initState();
@@ -58,7 +54,8 @@ class _StatsScreenState extends State<StatsScreen> with WidgetsBindingObserver {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final medicines = _medicines;
     final logs90Days = _logs90Days;
-    final overallPercent = StatsCalculator.overallPercent(medicines, logs90Days);
+    final overallPercent =
+        StatsCalculator.overallPercent(medicines, logs90Days);
 
     return Scaffold(
       backgroundColor:
@@ -346,18 +343,18 @@ class _StatsScreenState extends State<StatsScreen> with WidgetsBindingObserver {
     required int overallPercent,
   }) {
     final weekLogs = StatsCalculator.logsForDays(logs90Days, 7);
-    final isUsingDemoData = medicines.isEmpty;
-    final weeklyData =
-        isUsingDemoData ? StatsCalculator.demoWeeklyData : StatsCalculator.calculateRealWeeklyData(weekLogs);
-    final previousWeekLogs = StatsCalculator.logsInPastWindow(logs90Days, days: 7, offset: 7);
-    final daySummaries = isUsingDemoData
-        ? StatsCalculator.dailySummariesFromRates(weeklyData)
-        : StatsCalculator.dailySummaries(weekLogs, 7);
+    final hasData = weekLogs.isNotEmpty;
+    final weeklyData = StatsCalculator.calculateRealWeeklyData(weekLogs);
+    final previousWeekLogs =
+        StatsCalculator.logsInPastWindow(logs90Days, days: 7, offset: 7);
+    final daySummaries = StatsCalculator.dailySummaries(weekLogs, 7);
     final adherenceRate = overallPercent;
-    final takenCount = weekLogs.where((log) => log.status == DoseStatus.taken).length;
-    final missedCount = weekLogs.where((log) => log.status == DoseStatus.missed).length;
+    final takenCount =
+        weekLogs.where((log) => log.status == DoseStatus.taken).length;
+    final missedCount =
+        weekLogs.where((log) => log.status == DoseStatus.missed).length;
     final totalCount = weekLogs.length;
-    final streak = isUsingDemoData ? 3 : StatsCalculator.calculateStreak(logs90Days);
+    final streak = StatsCalculator.calculateStreak(logs90Days);
     final previousMissedCount =
         previousWeekLogs.where((log) => log.status == DoseStatus.missed).length;
     final insight = StatsCalculator.buildInsight(
@@ -375,13 +372,16 @@ class _StatsScreenState extends State<StatsScreen> with WidgetsBindingObserver {
         const SizedBox(height: 10),
         StatSummaryGrid(
           adherenceRate: adherenceRate,
-          adherenceTrend: StatsCalculator.trendLabel(adherenceRate - StatsCalculator.adherenceRate(previousWeekLogs)),
-          isAdherencePositive: adherenceRate >= StatsCalculator.adherenceRate(previousWeekLogs),
+          adherenceTrend: StatsCalculator.trendLabel(
+              adherenceRate - StatsCalculator.adherenceRate(previousWeekLogs)),
+          isAdherencePositive:
+              adherenceRate >= StatsCalculator.adherenceRate(previousWeekLogs),
           streak: streak,
           takenCount: takenCount,
           totalCount: totalCount,
           missedCount: missedCount,
-          missedTrend: StatsCalculator.missedTrendLabel(missedCount, previousMissedCount),
+          missedTrend: StatsCalculator.missedTrendLabel(
+              missedCount, previousMissedCount),
           isMissedPositive: missedCount <= previousMissedCount,
           isDark: isDark,
         ),
@@ -389,7 +389,7 @@ class _StatsScreenState extends State<StatsScreen> with WidgetsBindingObserver {
         WeeklyBarChart(
           weeklyData: weeklyData,
           daySummaries: daySummaries,
-          isUsingDemoData: isUsingDemoData,
+          hasData: hasData,
           isDark: isDark,
         ),
         const SizedBox(height: 12),
@@ -400,10 +400,11 @@ class _StatsScreenState extends State<StatsScreen> with WidgetsBindingObserver {
           trailing: 'Son 7 gün',
         ),
         const SizedBox(height: 12),
-        _buildInsightCard(
-          insight: insight,
-          isDark: isDark,
-        ),
+        if (medicines.isNotEmpty)
+          _buildInsightCard(
+            insight: insight,
+            isDark: isDark,
+          ),
       ],
     );
   }
@@ -413,10 +414,8 @@ class _StatsScreenState extends State<StatsScreen> with WidgetsBindingObserver {
     required List<Medicine> medicines,
     required List<DoseLog> logs90Days,
   }) {
-    final isUsingDemoData = medicines.isEmpty;
     final monthLogs = StatsCalculator.logsForDays(logs90Days, 35);
-    final heatmapData =
-        isUsingDemoData ? StatsCalculator.demoHeatmapData(35) : StatsCalculator.heatmapData(monthLogs, 35);
+    final heatmapData = StatsCalculator.heatmapData(monthLogs, 35);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -429,7 +428,7 @@ class _StatsScreenState extends State<StatsScreen> with WidgetsBindingObserver {
           title: 'Uyum Isı Haritası',
           trailing: '35 gün',
           crossAxisCount: 7,
-          showDemoBanner: isUsingDemoData,
+          hasData: monthLogs.isNotEmpty,
         ),
         const SizedBox(height: 12),
         MedicineBreakdownCard(
@@ -447,20 +446,13 @@ class _StatsScreenState extends State<StatsScreen> with WidgetsBindingObserver {
     required List<Medicine> medicines,
     required List<DoseLog> logs90Days,
   }) {
-    final isUsingDemoData = medicines.isEmpty;
-    final heatmapData =
-        isUsingDemoData ? StatsCalculator.demoHeatmapData(35) : StatsCalculator.heatmapData(logs90Days, 90);
-    final lastSeven = isUsingDemoData
-        ? StatsCalculator.dailySummariesFromRates(StatsCalculator.demoWeeklyData)
-        : StatsCalculator.dailySummaries(StatsCalculator.logsForDays(logs90Days, 7), 7);
-    final current30 = isUsingDemoData
-        ? ((StatsCalculator.demoHeatmapPattern.reduce((a, b) => a + b) /
-                    StatsCalculator.demoHeatmapPattern.length) *
-                100)
-            .round()
-        : StatsCalculator.adherenceRate(StatsCalculator.logsForDays(logs90Days, 30));
-    final previous30 =
-        StatsCalculator.adherenceRate(StatsCalculator.logsInPastWindow(logs90Days, days: 30, offset: 30));
+    final heatmapData = StatsCalculator.heatmapData(logs90Days, 90);
+    final lastSeven = StatsCalculator.dailySummaries(
+        StatsCalculator.logsForDays(logs90Days, 7), 7);
+    final current30 = StatsCalculator.adherenceRate(
+        StatsCalculator.logsForDays(logs90Days, 30));
+    final previous30 = StatsCalculator.adherenceRate(
+        StatsCalculator.logsInPastWindow(logs90Days, days: 30, offset: 30));
     final insight = StatsCalculator.buildInsight(
       medicines: medicines,
       logs: logs90Days,
@@ -478,9 +470,9 @@ class _StatsScreenState extends State<StatsScreen> with WidgetsBindingObserver {
           data: heatmapData,
           isDark: isDark,
           title: 'Uyum Isı Haritası',
-          trailing: isUsingDemoData ? '35 gün demo' : '90 gün',
+          trailing: '90 gün',
           crossAxisCount: 7,
-          showDemoBanner: isUsingDemoData,
+          hasData: logs90Days.isNotEmpty,
         ),
         const SizedBox(height: 12),
         _buildCardShell(
@@ -552,10 +544,11 @@ class _StatsScreenState extends State<StatsScreen> with WidgetsBindingObserver {
           ),
         ),
         const SizedBox(height: 12),
-        _buildInsightCard(
-          insight: insight,
-          isDark: isDark,
-        ),
+        if (medicines.isNotEmpty)
+          _buildInsightCard(
+            insight: insight,
+            isDark: isDark,
+          ),
       ],
     );
   }
@@ -712,13 +705,16 @@ class _StatsScreenState extends State<StatsScreen> with WidgetsBindingObserver {
 
     final updatedTimes = [...medicine.doseTimes];
     final slotIndex = updatedTimes.indexWhere(
-      (value) => StatsCalculator.doseSlot(StatsCalculator.timeFromString(value)) == insight.slot,
+      (value) =>
+          StatsCalculator.doseSlot(StatsCalculator.timeFromString(value)) ==
+          insight.slot,
     );
     if (slotIndex == -1) {
       return;
     }
 
-    updatedTimes[slotIndex] = StatsCalculator.timeToString(insight.recommendedTime!);
+    updatedTimes[slotIndex] =
+        StatsCalculator.timeToString(insight.recommendedTime!);
     final normalized = updatedTimes.toSet().toList()..sort();
     final updatedMedicine = medicine.copyWith(
       firstDoseTime: normalized.first,

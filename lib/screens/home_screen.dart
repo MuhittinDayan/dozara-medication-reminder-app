@@ -7,6 +7,7 @@ import '../models/medicine.dart';
 import '../models/profile.dart';
 import '../services/hive_service.dart';
 import '../services/notification_service.dart';
+import '../services/widget_service.dart';
 import '../utils/stats_calculator.dart';
 import '../theme/app_theme.dart';
 import 'add_medicine_screen.dart';
@@ -995,6 +996,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _markAsTaken(DoseLog dose) async {
     await HiveService.markDoseAsTaken(dose.id);
+    await WidgetService.onDoseTaken();
     await _loadData();
 
     if (!mounted) {

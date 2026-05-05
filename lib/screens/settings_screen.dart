@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -79,12 +80,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
 
       if (mounted && showSuccess) {
-        _showSnackBar('Bulut senkron tamamlandi.');
+        _showSnackBar('Yedekleme tamamlandi.');
       }
     } catch (error) {
       if (mounted) {
         _showSnackBar(
-          'Senkron tamamlanamadi: $error',
+          'Yedekleme tamamlanamadi: $error',
           backgroundColor: AppTheme.errorColor,
         );
       }
@@ -100,7 +101,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _showAuthDialog({required bool isSignUp}) async {
     if (!BackendService.isInitialized) {
       _showSnackBar(
-        'Supabase icin .env dosyasinda SUPABASE_URL ve SUPABASE_ANON_KEY gerekli.',
+        'Hesap ve yedekleme servisi su an hazir degil.',
         backgroundColor: AppTheme.warningColor,
       );
       return;
@@ -121,9 +122,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               final email = emailController.text.trim();
               final password = passwordController.text;
 
-              if (email.isEmpty || password.length < 6) {
+              final validationMessage = BackendService.validateEmailAndPassword(
+                email: email,
+                password: password,
+              );
+              if (validationMessage != null) {
                 setDialogState(() {
-                  errorText = 'E-posta ve en az 6 karakterli sifre girin.';
+                  errorText = validationMessage;
                 });
                 return;
               }
@@ -265,7 +270,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
 
       await _syncNow(showSuccess: false);
-      _showSnackBar('Hesap baglandi ve senkron baslatildi.');
+      _showSnackBar('Hesap baglandi ve yedekleme baslatildi.');
     }
   }
 
@@ -289,13 +294,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _isBusy = false;
     });
 
-    _showSnackBar('Bulut hesabindan cikis yapildi.');
+    _showSnackBar('Hesaptan cikis yapildi.');
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final appState = IlacHatirlaticiApp.of(context);
+    final appState = DozaraApp.of(context);
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -306,7 +311,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           padding: const EdgeInsets.only(bottom: 28),
           children: [
             _buildGradientHeader(isDarkMode),
-            _buildSettingsSectionTitle('Bulut Senkron'),
+            _buildSettingsSectionTitle('Hesap ve Yedekleme'),
             _buildContentPadding(
               child: _buildBackendSection(isDark),
             ),
@@ -331,20 +336,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
             ),
-            _buildSettingsSectionTitle('Geliştirici Araçları'),
+            _buildSettingsSectionTitle('Gelistirici Araclari'),
             _buildContentPadding(
               child: _buildSectionCard(
                 isDark: isDark,
                 children: [
-                  _buildActionTile(
-                    icon: Icons.science_rounded,
-                    title: 'Örnek Veri Yükle',
-                    subtitle: 'Sahte ilaç ve doz verisi ekler (Test için).',
-                    isDark: isDark,
-                    enabled: true,
-                    onTap: _loadDummyData,
-                  ),
-                  _buildDivider(isDark),
                   _buildActionTile(
                     icon: Icons.notifications_active_rounded,
                     title: 'Test Bildirimi Gönder',
@@ -356,14 +352,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
             ),
-            _buildSettingsSectionTitle('Hakkında'),
+            _buildSettingsSectionTitle('Hakkinda'),
             _buildContentPadding(
               child: _buildSectionCard(
                 isDark: isDark,
                 children: [
                   _buildInfoTile(
                     icon: Icons.medication_rounded,
-                    title: 'İlaç Hatırlatıcı',
+                    title: 'Dozara',
                     subtitle: 'Surum 1.0.0',
                     isDark: isDark,
                   ),
@@ -380,10 +376,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       await HiveService.injectDummyData();
       if (mounted) {
-        _showSnackBar('Örnek veriler başarıyla yüklendi. 2 dakika sonraya bildirim ayarlandı.');
+        _showSnackBar(
+            'Örnek veriler başarıyla yüklendi. 2 dakika sonraya bildirim ayarlandı.');
       }
     } catch (e) {
-      if (mounted) _showSnackBar('Hata: $e', backgroundColor: AppTheme.errorColor);
+      if (mounted) {
+        _showSnackBar('Hata: $e', backgroundColor: AppTheme.errorColor);
+      }
     }
   }
 
@@ -392,7 +391,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await NotificationService.showTestNotification();
       if (mounted) _showSnackBar('Test bildirimi gönderildi.');
     } catch (e) {
-      if (mounted) _showSnackBar('Bildirim hatası: $e', backgroundColor: AppTheme.errorColor);
+      if (mounted) {
+        _showSnackBar('Bildirim hatası: $e',
+            backgroundColor: AppTheme.errorColor);
+      }
     }
   }
 
@@ -408,9 +410,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         children: [
           _buildInfoTile(
             icon: Icons.cloud_off_rounded,
-            title: 'Supabase Kapali',
+            title: 'Yedekleme Kapali',
             subtitle: configWarning ??
-                '.env dosyasina SUPABASE_URL ve SUPABASE_ANON_KEY eklenince bulut senkron acilir.',
+                'Hesap ve yedekleme servisi su an hazir degil.',
             isDark: isDark,
           ),
         ],
@@ -425,15 +427,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _buildInfoTile(
             icon: Icons.cloud_queue_rounded,
             title: 'Hesap Bagli Degil',
-            subtitle:
-                'Ilaclarinizi ve doz gecmisinizi Supabase hesabinizla cihazlar arasinda esitleyin.',
+            subtitle: 'Ilaclarinizi ve doz gecmisinizi hesabiniza yedekleyin.',
             isDark: isDark,
           ),
           _buildDivider(isDark),
           _buildActionTile(
             icon: Icons.login_rounded,
             title: 'Giris Yap',
-            subtitle: 'Var olan hesabinizla bulut senkronu baslatin.',
+            subtitle: 'Var olan hesabinizla yedeklemeyi acin.',
             isDark: isDark,
             enabled: !_isBusy && !_isSyncing,
             onTap: () => _showAuthDialog(isSignUp: false),
@@ -442,7 +443,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _buildActionTile(
             icon: Icons.person_add_alt_1_rounded,
             title: 'Hesap Olustur',
-            subtitle: 'Yeni Supabase kullanici hesabi acin.',
+            subtitle: 'Yeni Dozara hesabi acin.',
             isDark: isDark,
             enabled: !_isBusy && !_isSyncing,
             onTap: () => _showAuthDialog(isSignUp: true),
@@ -456,16 +457,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
       children: [
         _buildInfoTile(
           icon: Icons.cloud_done_rounded,
-          title: 'Bulut Hesabi Bagli',
+          title: 'Hesap Bagli',
           subtitle: email,
           isDark: isDark,
         ),
         _buildDivider(isDark),
         _buildActionTile(
           icon: Icons.sync_rounded,
-          title: _isSyncing ? 'Senkron Suruyor' : 'Simdi Senkronize Et',
+          title: _isSyncing ? 'Yedekleniyor' : 'Simdi Yedekle',
           subtitle:
-              'Supabase verilerini cihaza cekip yerel degisiklikleri buluta gonderir.',
+              'Hesaptaki verileri cihaza alir, yerel degisiklikleri hesaba kaydeder.',
           isDark: isDark,
           enabled: !_isBusy && !_isSyncing,
           onTap: _syncNow,
@@ -474,7 +475,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _buildActionTile(
           icon: Icons.logout_rounded,
           title: 'Cikis Yap',
-          subtitle: 'Yerel veriler cihazda kalir, bulut senkron durur.',
+          subtitle: 'Yerel veriler cihazda kalir, yedekleme durur.',
           isDark: isDark,
           enabled: !_isBusy && !_isSyncing,
           onTap: _signOut,
@@ -521,9 +522,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _buildHeaderStatusCard(
             label: 'Tema',
             value: isDarkMode ? 'Karanlık' : 'Açık',
-            icon: isDarkMode
-                ? Icons.dark_mode_rounded
-                : Icons.light_mode_rounded,
+            icon:
+                isDarkMode ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
             isActive: true,
           ),
         ],

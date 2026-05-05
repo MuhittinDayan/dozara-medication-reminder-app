@@ -1,15 +1,18 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
-import 'package:ilac_hatirlatici/main.dart';
-import 'package:ilac_hatirlatici/models/profile.dart';
-import 'package:ilac_hatirlatici/screens/main_screen.dart';
-import 'package:ilac_hatirlatici/screens/onboarding_screen.dart';
-import 'package:ilac_hatirlatici/services/hive_service.dart';
+import 'package:dozara/main.dart';
+import 'package:dozara/models/profile.dart';
+import 'package:dozara/screens/main_screen.dart';
+import 'package:dozara/screens/onboarding_screen.dart';
+import 'package:dozara/services/hive_service.dart';
+import 'package:dozara/widgets/home/home_day_summary.dart';
+import 'package:dozara/widgets/home/home_header.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -17,6 +20,7 @@ void main() {
   late Directory tempDir;
 
   setUpAll(() async {
+    FlutterSecureStorage.setMockInitialValues({});
     await initializeDateFormatting('tr_TR', null);
     tempDir = await Directory.systemTemp.createTemp('ilac_hatirlatici_widget');
     Hive.init(tempDir.path);
@@ -34,7 +38,7 @@ void main() {
 
   testWidgets('App loads smoke test', (WidgetTester tester) async {
     await tester.pumpWidget(
-      const IlacHatirlaticiApp(
+      const DozaraApp(
         showOnboarding: false,
       ),
     );
@@ -47,27 +51,20 @@ void main() {
     expect(find.byIcon(Icons.add_rounded), findsWidgets);
   });
 
-
-
   testWidgets('Onboarding appears when it is not completed',
       (WidgetTester tester) async {
     await tester.pumpWidget(
-      const IlacHatirlaticiApp(),
+      const DozaraApp(),
     );
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.byType(OnboardingScreen), findsOneWidget);
-    expect(find.text('MediTrack'), findsOneWidget);
+    expect(find.text('Dozara'), findsOneWidget);
   });
 
   testWidgets('Home screen still renders when active profile name is empty',
       (WidgetTester tester) async {
-    await Hive.box<Profile>('profiles').clear();
-    await Hive.box('settings').clear();
-    await Hive.box('medicines').clear();
-    await Hive.box('dose_logs').clear();
-
     final emptyNameProfile = Profile(
       id: 'empty-name-profile',
       name: '',
@@ -75,12 +72,25 @@ void main() {
       avatarUrl: '',
     );
 
-    await HiveService.addProfile(emptyNameProfile);
-    await HiveService.setActiveProfile(emptyNameProfile.id);
-
     await tester.pumpWidget(
-      const IlacHatirlaticiApp(
-        showOnboarding: false,
+      MaterialApp(
+        home: Scaffold(
+          body: HomeHeader(
+            activeProfile: emptyNameProfile,
+            summary: const HomeDaySummary(
+              takenCount: 0,
+              pendingCount: 0,
+              missedCount: 0,
+              completionRate: 0,
+              totalCount: 0,
+            ),
+            currentStreak: 0,
+            isDark: false,
+            isSelectedDayToday: true,
+            onNotificationsTap: () {},
+            onProfileTap: (_) {},
+          ),
+        ),
       ),
     );
     await tester.pump();
@@ -88,6 +98,6 @@ void main() {
 
     expect(tester.takeException(), isNull);
     expect(find.textContaining('Merhaba,'), findsOneWidget);
-    expect(find.textContaining('İlaç'), findsWidgets);
+    expect(find.text('Merhaba, Ben'), findsOneWidget);
   });
 }

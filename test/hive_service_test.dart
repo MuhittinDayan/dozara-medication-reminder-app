@@ -1,15 +1,17 @@
 import 'dart:io';
 
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 
-import 'package:ilac_hatirlatici/models/medicine.dart';
-import 'package:ilac_hatirlatici/services/hive_service.dart';
+import 'package:dozara/models/medicine.dart';
+import 'package:dozara/services/hive_service.dart';
 
 void main() {
   late Directory tempDir;
 
   setUp(() async {
+    FlutterSecureStorage.setMockInitialValues({});
     tempDir = await Directory.systemTemp.createTemp('ilac_hatirlatici_hive');
     Hive.init(tempDir.path);
     HiveService.registerAdapters();
@@ -73,4 +75,34 @@ void main() {
     expect(HiveService.isOnboardingCompleted(), isFalse);
   });
 
+  test('daily quota is consumed and resets by feature key', () async {
+    expect(
+      await HiveService.tryConsumeDailyQuota(
+        featureKey: 'geminiScan',
+        dailyLimit: 2,
+      ),
+      isTrue,
+    );
+    expect(
+      await HiveService.tryConsumeDailyQuota(
+        featureKey: 'geminiScan',
+        dailyLimit: 2,
+      ),
+      isTrue,
+    );
+    expect(
+      await HiveService.tryConsumeDailyQuota(
+        featureKey: 'geminiScan',
+        dailyLimit: 2,
+      ),
+      isFalse,
+    );
+    expect(
+      await HiveService.tryConsumeDailyQuota(
+        featureKey: 'geminiAssistant',
+        dailyLimit: 2,
+      ),
+      isTrue,
+    );
+  });
 }
