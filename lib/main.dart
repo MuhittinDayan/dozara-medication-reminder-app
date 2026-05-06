@@ -9,6 +9,7 @@ import 'package:firebase_core/firebase_core.dart';
 
 import 'cubit/profile_cubit.dart';
 import 'data/backend/backend_service.dart';
+import 'data/repositories/profile_repository.dart';
 import 'data/sync/sync_service.dart';
 import 'screens/add_medicine_screen.dart';
 import 'screens/main_screen.dart';
@@ -16,6 +17,7 @@ import 'screens/onboarding_screen.dart';
 import 'services/ai_service.dart';
 import 'services/hive_service.dart';
 import 'services/notification_service.dart';
+import 'services/notification_scheduler.dart';
 import 'services/family_notification_service.dart';
 import 'services/widget_service.dart';
 import 'theme/app_theme.dart';
@@ -24,10 +26,10 @@ void main() async {
   final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
   await dotenv.load(fileName: '.env', isOptional: true);
-  
+
   // Firebase'i baslat
   await Firebase.initializeApp();
-  
+
   await BackendService.init();
   await initializeDateFormatting('tr_TR', null);
 
@@ -38,14 +40,14 @@ void main() async {
 
   await NotificationService.init();
   AIService.init();
-  
+
   // Aile bildirimlerini baslat
   await FamilyNotificationService.init();
-  
+
   // Widget servisini baslat
   await WidgetService.init();
   await WidgetService.updateWidget();
-  
+
   await HiveService.syncDoseLogs();
   await SyncService.syncNow();
   HiveService.onLocalDataChanged = SyncService.pushLocalSnapshot;
@@ -131,7 +133,7 @@ class DozaraAppState extends State<DozaraApp> {
       }
 
       _navigatorKey.currentState?.push(
-        MaterialPageRoute(
+        MaterialPageRoute<void>(
           builder: (_) => const AddMedicineScreen(),
         ),
       );
@@ -171,7 +173,10 @@ class DozaraAppState extends State<DozaraApp> {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => ProfileCubit()..hydrate(),
+      create: (_) => ProfileCubit(
+        repository: HiveProfileRepository(),
+        notificationScheduler: const FlutterNotificationScheduler(),
+      )..hydrate(),
       child: MaterialApp(
         navigatorKey: _navigatorKey,
         title: 'Dozara',

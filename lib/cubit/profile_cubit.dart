@@ -1,84 +1,87 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../data/repositories/profile_repository.dart';
 import '../models/profile.dart';
-import '../services/hive_service.dart';
-import '../services/notification_service.dart';
+import '../services/notification_scheduler.dart';
 
 class ProfileState {
-  const ProfileState({
-    required this.profiles,
-    required this.activeProfileId,
-  });
+  ProfileState({
+    required List<Profile> profiles,
+    required this.activeProfile,
+  }) : profiles = List<Profile>.unmodifiable(profiles);
 
   final List<Profile> profiles;
-  final String activeProfileId;
+  final Profile activeProfile;
 
-  Profile get activeProfile {
-    if (profiles.isEmpty) {
-      return HiveService.getActiveProfile();
-    }
-
-    for (final profile in profiles) {
-      if (profile.id == activeProfileId) {
-        return profile;
-      }
-    }
-
-    return profiles.first;
-  }
+  String get activeProfileId => activeProfile.id;
 
   ProfileState copyWith({
     List<Profile>? profiles,
-    String? activeProfileId,
+    Profile? activeProfile,
   }) {
     return ProfileState(
       profiles: profiles ?? this.profiles,
-      activeProfileId: activeProfileId ?? this.activeProfileId,
+      activeProfile: activeProfile ?? this.activeProfile,
     );
   }
 }
 
 class ProfileCubit extends Cubit<ProfileState> {
-  ProfileCubit()
-      : super(
+  ProfileCubit({
+    ProfileRepository? repository,
+    NotificationScheduler? notificationScheduler,
+  }) : this._(
+          repository ?? HiveProfileRepository(),
+          notificationScheduler ?? const FlutterNotificationScheduler(),
+        );
+
+  ProfileCubit._(
+    ProfileRepository repository,
+    NotificationScheduler notificationScheduler,
+  )   : _repository = repository,
+        _notificationScheduler = notificationScheduler,
+        super(
           ProfileState(
-            profiles: HiveService.getAllProfiles(),
-            activeProfileId: HiveService.getActiveProfile().id,
+            profiles: repository.getAll(),
+            activeProfile: repository.getActive(),
           ),
         );
+
+  final ProfileRepository _repository;
+  final NotificationScheduler _notificationScheduler;
 
   Future<void> hydrate() async {
     emit(
       state.copyWith(
-        profiles: HiveService.getAllProfiles(),
-        activeProfileId: HiveService.getActiveProfile().id,
+        profiles: _repository.getAll(),
+        activeProfile: _repository.getActive(),
       ),
     );
   }
 
   Future<void> switchTo(String profileId) async {
-    await HiveService.setActiveProfile(profileId);
-    await NotificationService.rescheduleAllNotifications();
+    await _repository.setActive(profileId);
+    await _notificationScheduler.rescheduleAllNotifications();
     await hydrate();
   }
 
   Future<void> createProfile(Profile profile, {bool makeActive = true}) async {
-    await HiveService.addProfile(profile);
+    await _repository.add(profile);
     if (makeActive) {
-      await HiveService.setActiveProfile(profile.id);
-      await NotificationService.rescheduleAllNotifications();
+      await _repository.setActive(profile.id);
+      await _notificationScheduler.rescheduleAllNotifications();
     }
     await hydrate();
   }
 
   Future<void> updateProfile(Profile profile) async {
-    await HiveService.updateProfile(profile);
+    await _repository.update(profile);
     await hydrate();
   }
 
   Future<void> deleteProfile(String profileId) async {
-    await HiveService.deleteProfile(profileId);
-    await NotificationService.rescheduleAllNotifications();
+    await _repository.delete(profileId);
+    await _notificationScheduler.rescheduleAllNotifications();
     await hydrate();
   }
 }

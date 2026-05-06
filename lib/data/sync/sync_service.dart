@@ -20,7 +20,7 @@ class SyncService {
     try {
       await _pullRemoteSnapshot(remote);
       await _pushLocalSnapshot(remote);
-    } catch (error, stackTrace) {
+    } on Object catch (error, stackTrace) {
       debugPrint('Supabase sync skipped: $error');
       debugPrintStack(stackTrace: stackTrace);
     }
@@ -35,7 +35,7 @@ class SyncService {
 
     try {
       await _pushLocalSnapshot(remote);
-    } catch (error, stackTrace) {
+    } on Object catch (error, stackTrace) {
       debugPrint('Supabase sync skipped: $error');
       debugPrintStack(stackTrace: stackTrace);
     }
@@ -63,7 +63,7 @@ class SyncService {
   }
 
   static Future<void> _pushLocalSnapshot(SupabaseDataSource remote) async {
-    await ProfileRepository(remote: remote).pushLocalSnapshot();
+    await HiveProfileRepository(remote: remote).pushLocalSnapshot();
     await MedicineRepository(remote: remote).pushLocalSnapshot();
     await DoseRepository(remote: remote).pushLocalSnapshot();
   }
