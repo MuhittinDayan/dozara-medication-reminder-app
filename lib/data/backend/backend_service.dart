@@ -5,26 +5,24 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class BackendService {
   static const String supabaseUrlKey = 'SUPABASE_URL';
   static const String supabaseAnonKey = 'SUPABASE_ANON_KEY';
+  static const String _definedSupabaseUrl = String.fromEnvironment(
+    supabaseUrlKey,
+  );
+  static const String _definedSupabaseAnonKey = String.fromEnvironment(
+    supabaseAnonKey,
+  );
 
   static bool _isInitialized = false;
 
   static bool get isConfigured {
-    if (!dotenv.isInitialized) {
-      return false;
-    }
-
-    final url = dotenv.maybeGet(supabaseUrlKey)?.trim() ?? '';
-    final anonKey = dotenv.maybeGet(supabaseAnonKey)?.trim() ?? '';
+    final url = _configValue(supabaseUrlKey);
+    final anonKey = _configValue(supabaseAnonKey);
     return url.isNotEmpty && anonKey.isNotEmpty && configurationWarning == null;
   }
 
   static String? get configurationWarning {
-    if (!dotenv.isInitialized) {
-      return null;
-    }
-
-    final url = dotenv.maybeGet(supabaseUrlKey)?.trim() ?? '';
-    final anonKey = dotenv.maybeGet(supabaseAnonKey)?.trim() ?? '';
+    final url = _configValue(supabaseUrlKey);
+    final anonKey = _configValue(supabaseAnonKey);
     if (url.isEmpty || anonKey.isEmpty) {
       return 'Hesap ve yedekleme servisi su an hazir degil.';
     }
@@ -41,6 +39,23 @@ class BackendService {
     }
 
     return null;
+  }
+
+  static String _configValue(String key) {
+    final definedValue = switch (key) {
+      supabaseUrlKey => _definedSupabaseUrl,
+      supabaseAnonKey => _definedSupabaseAnonKey,
+      _ => '',
+    };
+    if (definedValue.trim().isNotEmpty) {
+      return definedValue.trim();
+    }
+
+    if (!dotenv.isInitialized) {
+      return '';
+    }
+
+    return dotenv.maybeGet(key)?.trim() ?? '';
   }
 
   static bool get isInitialized => _isInitialized;
@@ -170,11 +185,11 @@ class BackendService {
 
     try {
       await Supabase.initialize(
-        url: dotenv.get(supabaseUrlKey),
-        anonKey: dotenv.get(supabaseAnonKey),
+        url: _configValue(supabaseUrlKey),
+        anonKey: _configValue(supabaseAnonKey),
       );
       _isInitialized = true;
-    } catch (error, stackTrace) {
+    } on Object catch (error, stackTrace) {
       _isInitialized = false;
       debugPrint('Supabase init skipped: $error');
       debugPrintStack(stackTrace: stackTrace);

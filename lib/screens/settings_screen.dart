@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -82,7 +81,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (mounted && showSuccess) {
         _showSnackBar('Yedekleme tamamlandi.');
       }
-    } catch (error) {
+    } on Object catch (error) {
       if (mounted) {
         _showSnackBar(
           'Yedekleme tamamlanamadi: $error',
@@ -154,7 +153,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 if (dialogContext.mounted) {
                   Navigator.of(dialogContext).pop(true);
                 }
-              } catch (error) {
+              } on Object catch (error) {
                 final friendlyMessage = BackendService.friendlyAuthError(error);
                 setDialogState(() {
                   if (friendlyMessage.contains('Giris yap sekmesini') ||
@@ -372,25 +371,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Future<void> _loadDummyData() async {
-    try {
-      await HiveService.injectDummyData();
-      if (mounted) {
-        _showSnackBar(
-            'Örnek veriler başarıyla yüklendi. 2 dakika sonraya bildirim ayarlandı.');
-      }
-    } catch (e) {
-      if (mounted) {
-        _showSnackBar('Hata: $e', backgroundColor: AppTheme.errorColor);
-      }
-    }
-  }
-
   Future<void> _sendTestNotification() async {
     try {
       await NotificationService.showTestNotification();
       if (mounted) _showSnackBar('Test bildirimi gönderildi.');
-    } catch (e) {
+    } on Object catch (e) {
       if (mounted) {
         _showSnackBar('Bildirim hatası: $e',
             backgroundColor: AppTheme.errorColor);

@@ -16,7 +16,7 @@ class HomeHeader extends StatelessWidget {
   final bool isSelectedDayToday;
   final Medicine? nextMedicine;
   final VoidCallback onNotificationsTap;
-  final Function(Profile) onProfileTap;
+  final ValueChanged<Profile> onProfileTap;
 
   const HomeHeader({
     super.key,
@@ -105,11 +105,13 @@ class HomeHeader extends StatelessWidget {
                         if (currentStreak > 0) ...[
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
                               color: Colors.orange.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: Colors.orange.withValues(alpha: 0.5)),
+                              border: Border.all(
+                                  color: Colors.orange.withValues(alpha: 0.5)),
                             ),
                             child: Text(
                               '🔥 $currentStreak gün',

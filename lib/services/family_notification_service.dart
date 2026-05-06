@@ -1,9 +1,6 @@
-import 'dart:convert';
-
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 
-import 'hive_service.dart';
 import 'notification_service.dart';
 
 /// Aile bildirim servisi - FCM ile aile/bakıcılara bildirim gönderir
@@ -62,7 +59,7 @@ class FamilyNotificationService {
       }
 
       _isInitialized = true;
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('FCM init error: $e');
     }
   }
@@ -70,7 +67,7 @@ class FamilyNotificationService {
   /// Supabase'e FCM token'ini kaydeder
   static Future<void> _saveTokenToBackend(String? token) async {
     if (token == null) return;
-    
+
     // Token'ı Hive'da sakla (yedekleme için)
     // Gelecekte Supabase Realtime ile senkronize edilebilir
     debugPrint('FCM Token saved locally');
@@ -79,9 +76,9 @@ class FamilyNotificationService {
   /// On plan bildirim handler'i
   static void _onForegroundMessage(RemoteMessage message) {
     debugPrint('Foreground notification: ${message.notification?.title}');
-    
+
     onNotificationReceived?.call(message);
-    
+
     // Bildirimi goster
     _showLocalNotification(message);
   }
@@ -111,7 +108,7 @@ class FamilyNotificationService {
   }
 
   /// Aile uyesine doz bildirimi gonder
-  /// 
+  ///
   /// [receiverToken] - Hedef kullanıcının FCM token'ı
   /// [profileName] - Ilaç alan kişinin adi
   /// [medicineName] - Ilaç adi
@@ -147,7 +144,8 @@ class FamilyNotificationService {
       return;
     }
 
-    debugPrint('Missed dose alert: $profileName missed $medicineName at $doseTime');
+    debugPrint(
+        'Missed dose alert: $profileName missed $medicineName at $doseTime');
   }
 
   /// Düşük stok bildirimi gonder
@@ -197,7 +195,7 @@ class FamilyNotificationService {
   }
 
   /// Token'i Supabase'e kaydet (gercek uygulamada)
-  /// 
+  ///
   /// Bu fonksiyon Supabase veritabanina FCM token'ini kaydeder
   /// Kullanici profili ile iliskilendirilir
   static Future<void> registerTokenForProfile({

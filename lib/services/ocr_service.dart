@@ -15,7 +15,7 @@ class OcrService {
       return '';
     } on PlatformException {
       return '';
-    } catch (_) {
+    } on Object catch (_) {
       return '';
     } finally {
       await recognizer.close();

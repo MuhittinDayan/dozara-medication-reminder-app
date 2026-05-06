@@ -34,7 +34,7 @@ class HiveService {
   static late Box<Medicine> _medicineBox;
   static late Box<DoseLog> _doseLogBox;
   static late Box<Profile> _profileBox;
-  static late Box _settingsBox;
+  static late Box<dynamic> _settingsBox;
 
   static const _uuid = Uuid();
 
@@ -143,7 +143,7 @@ class HiveService {
   ) async {
     try {
       return await Hive.openBox<T>(name, encryptionCipher: cipher);
-    } catch (openError) {
+    } on Object catch (openError) {
       try {
         debugPrint(
           'HiveService: "$name" box eski şifresiz formattan taşınıyor.',
@@ -159,7 +159,7 @@ class HiveService {
           await encryptedBox.putAll(legacyEntries);
         }
         return encryptedBox;
-      } catch (migrationError) {
+      } on Object catch (migrationError) {
         throw StateError(
           'Hive "$name" box şifreli açılamadı ve otomatik migrasyon '
           'tamamlanamadı. İlk hata: $openError. Migrasyon hatası: '

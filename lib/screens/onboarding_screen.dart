@@ -172,7 +172,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     if (!BackendService.isInitialized || configWarning != null) {
       setState(() {
         _authError = configWarning ??
-            'Hesap servisi hazir degil. .env ayarlarini kontrol edip uygulamayi yeniden baslatin.';
+            'Hesap servisi hazir degil. Uygulama ayarlarini kontrol edip yeniden baslatin.';
         _authMessageIsInfo = false;
       });
       return;
@@ -240,7 +240,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       }
 
       await _goNext();
-    } catch (error) {
+    } on Object catch (error) {
       if (mounted) {
         final friendlyMessage = BackendService.friendlyAuthError(error);
         setState(() {
@@ -709,7 +709,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           ),
         ),
         const SizedBox(height: 18),
-        _SectionLabel(label: 'Kronik hastalik var mi?'),
+        const _SectionLabel(label: 'Kronik hastalik var mi?'),
         const SizedBox(height: 10),
         Wrap(
           spacing: 8,

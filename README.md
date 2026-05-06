@@ -30,11 +30,18 @@ Flutter ile gelistirilmis, cok profilli bir ilac takip ve hatirlatma uygulamasi.
 flutter pub get
 ```
 
-2. Supabase baglantisi icin proje kokune `.env` dosyasi ekle:
+2. Supabase baglantisini yerelde `.env` ile veya CI ortaminda
+   `--dart-define` degerleriyle ayarla:
 
 ```env
 SUPABASE_URL=https://project-ref.supabase.co
 SUPABASE_ANON_KEY=your_anon_key_here
+```
+
+```bash
+flutter run \
+  --dart-define=SUPABASE_URL=https://project-ref.supabase.co \
+  --dart-define=SUPABASE_ANON_KEY=your_anon_key_here
 ```
 
 Gemini API anahtari Flutter `.env` dosyasina konmaz. AI ozellikleri

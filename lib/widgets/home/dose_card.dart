@@ -66,7 +66,7 @@ class _DoseCardState extends State<DoseCard> {
   Future<void> _handleTake() async {
     if (_isTaking) return;
     setState(() => _isTaking = true);
-    await Future.delayed(const Duration(milliseconds: 600));
+    await Future<void>.delayed(const Duration(milliseconds: 600));
     widget.onTake();
   }
 
@@ -121,9 +121,7 @@ class _DoseCardState extends State<DoseCard> {
                             Icons.check_rounded,
                             color: AppTheme.takenColor,
                             size: 22,
-                          )
-                            .animate()
-                            .scale(
+                          ).animate().scale(
                               begin: const Offset(0, 0),
                               end: const Offset(1, 1),
                               duration: 300.ms,

@@ -10,7 +10,7 @@ import 'hive_service.dart';
 class WidgetService {
   static const String _appGroupId = 'group.com.dozara.app';
   static const String _androidWidgetName = 'DozaraWidgetReceiver';
-  
+
   /// Widget'ı başlatır ve günceller
   static Future<void> init() async {
     // iOS için app group
@@ -20,43 +20,38 @@ class WidgetService {
   /// Widget verilerini günceller
   static Future<void> updateWidget() async {
     try {
-      // Sonraki dozu bul
-      final pendingLogs = HiveService.getPendingFutureDoseLogs(daysAhead: 1);
       final todayDoses = HiveService.getTodayDoseLogs();
-      
+
       // Bugünkü bekleyen dozlar
-      final pendingDoses = todayDoses.where((log) => 
-        log.status == DoseStatus.pending || 
-        log.status == DoseStatus.snoozed
-      ).toList();
-      
+      final pendingDoses = todayDoses
+          .where((log) =>
+              log.status == DoseStatus.pending ||
+              log.status == DoseStatus.snoozed)
+          .toList();
+
       // Sonraki doz
       DoseLog? nextDose;
       if (pendingDoses.isNotEmpty) {
         pendingDoses.sort((a, b) => a.scheduledTime.compareTo(b.scheduledTime));
         nextDose = pendingDoses.first;
       }
-      
+
       // Widget verilerini kaydet
       await HomeWidget.saveWidgetData<String>(
-        'next_dose',
-        nextDose != null 
-          ? DateFormat('HH:mm').format(nextDose.scheduledTime)
-          : '--:--'
-      );
-      
+          'next_dose',
+          nextDose != null
+              ? DateFormat('HH:mm').format(nextDose.scheduledTime)
+              : '--:--');
+
       await HomeWidget.saveWidgetData<String>(
-        'medicine_name',
-        nextDose != null 
-          ? HiveService.getMedicine(nextDose.medicineId)?.name ?? 'İlaç'
-          : 'Bugün plan yok'
-      );
-      
+          'medicine_name',
+          nextDose != null
+              ? HiveService.getMedicine(nextDose.medicineId)?.name ?? 'İlaç'
+              : 'Bugün plan yok');
+
       await HomeWidget.saveWidgetData<String>(
-        'pending_count',
-        pendingDoses.length.toString()
-      );
-      
+          'pending_count', pendingDoses.length.toString());
+
       // Widget'ı güncelle
       await HomeWidget.updateWidget(
         name: _androidWidgetName,
@@ -64,7 +59,7 @@ class WidgetService {
         iOSName: 'DozaraWidget',
         qualifiedAndroidName: 'com.dozara.app.$_androidWidgetName',
       );
-    } catch (e) {
+    } on Object catch (e) {
       debugPrint('Widget update error: $e');
     }
   }

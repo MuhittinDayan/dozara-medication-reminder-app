@@ -199,7 +199,7 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
         ScaffoldMessenger.of(context)
             .showSnackBar(const SnackBar(content: Text('Forma uygulandı.')));
       }
-    } catch (e) {
+    } on Object catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text('Hata: $e')));

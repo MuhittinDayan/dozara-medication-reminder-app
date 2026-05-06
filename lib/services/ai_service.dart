@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/backend/backend_service.dart';
@@ -204,8 +205,8 @@ class AIService {
       return fields.isEmpty
           ? null
           : MedicineScanResult(ocrText: ocrText, fields: fields);
-    } catch (e) {
-      print('AI Image Analysis Error: $e');
+    } on Object catch (e) {
+      debugPrint('AI Image Analysis Error: $e');
       final friendlyMessage = _friendlyProxyError(e);
       if (friendlyMessage != null) {
         throw AIQuotaExceededException(friendlyMessage);
@@ -756,8 +757,8 @@ $question
         'prompt': prompt,
       });
       return _parseAssistantResponse(responseText);
-    } catch (e) {
-      print('AI Assistant Structured Error: $e');
+    } on Object catch (e) {
+      debugPrint('AI Assistant Structured Error: $e');
       return _fallbackAssistantResponse(
         question,
         context,

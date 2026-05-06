@@ -135,7 +135,7 @@ class FamilyProfilesScreen extends StatelessWidget {
 
   Future<void> _openCareSummary(BuildContext context) async {
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const FamilyCareSummaryScreen()),
+      MaterialPageRoute<void>(builder: (_) => const FamilyCareSummaryScreen()),
     );
   }
 
@@ -144,7 +144,7 @@ class FamilyProfilesScreen extends StatelessWidget {
     Profile? profile,
   }) async {
     await Navigator.of(context).push(
-      MaterialPageRoute(
+      MaterialPageRoute<void>(
         builder: (_) => FamilyProfileEditorScreen(initialProfile: profile),
       ),
     );
@@ -247,7 +247,7 @@ class FamilyCareSummaryScreen extends StatelessWidget {
     Profile? profile,
   }) async {
     await Navigator.of(context).push(
-      MaterialPageRoute(
+      MaterialPageRoute<void>(
         builder: (_) => FamilyProfileEditorScreen(initialProfile: profile),
       ),
     );

@@ -919,7 +919,7 @@ class _MedicineDetailScreenState extends State<MedicineDetailScreen> {
 
   Future<void> _openAssistantScreen() async {
     await Navigator.of(context).push(
-      MaterialPageRoute(
+      MaterialPageRoute<void>(
         builder: (_) => AiAssistantScreen(medicine: _medicine),
       ),
     );
@@ -931,7 +931,7 @@ class _MedicineDetailScreenState extends State<MedicineDetailScreen> {
   Future<void> _editMedicine() async {
     final result = await Navigator.push(
       context,
-      MaterialPageRoute(
+      MaterialPageRoute<Object?>(
         builder: (_) => AddMedicineScreen(initialMedicine: _medicine),
       ),
     );
@@ -1106,7 +1106,7 @@ class _MedicineDetailScreenState extends State<MedicineDetailScreen> {
                   aiResponse = response;
                   isLoading = false;
                 });
-              } catch (e) {
+              } on Object catch (e) {
                 setSheetState(() {
                   aiResponse = 'Asistan yanıtı alınamadı: $e';
                   isLoading = false;

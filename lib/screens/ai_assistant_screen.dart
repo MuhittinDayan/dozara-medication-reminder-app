@@ -989,9 +989,9 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
         child: Container(
           constraints: const BoxConstraints(maxWidth: 300),
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             color: AppTheme.primaryColor,
-            borderRadius: const BorderRadius.only(
+            borderRadius: BorderRadius.only(
               topLeft: Radius.circular(16),
               topRight: Radius.circular(16),
               bottomLeft: Radius.circular(16),

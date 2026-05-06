@@ -197,7 +197,7 @@ class _MainScreenState extends State<MainScreen> {
 
   Future<void> _openAddMedicine() async {
     final result = await Navigator.of(context).push(
-      MaterialPageRoute(
+      MaterialPageRoute<Object?>(
         builder: (_) => const AddMedicineScreen(),
       ),
     );
