@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../models/dose_log.dart';
 import '../models/medicine.dart';
 import '../services/hive_service.dart';
 import '../services/notification_service.dart';
 import '../utils/stats_calculator.dart';
+import '../view_models/stats_dashboard_view_model.dart';
 import '../widgets/stats/stat_summary_grid.dart';
 import '../widgets/stats/weekly_bar_chart.dart';
 import '../widgets/stats/heatmap_card.dart';
@@ -25,11 +25,13 @@ class _StatsScreenState extends State<StatsScreen> with WidgetsBindingObserver {
   _StatsView _selectedView = _StatsView.week;
   bool _isGeneratingPdf = false;
   bool _isApplyingInsight = false;
+  StatsDashboardViewModel _dashboard = StatsDashboardViewModel.empty();
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _loadData();
   }
 
   @override
@@ -41,21 +43,22 @@ class _StatsScreenState extends State<StatsScreen> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && mounted) {
-      setState(() {});
+      _loadData();
     }
   }
 
-  List<Medicine> get _medicines => HiveService.getActiveMedicines();
-
-  List<DoseLog> get _logs90Days => HiveService.getRecentDoseLogs(days: 90);
+  void _loadData() {
+    setState(() {
+      _dashboard = StatsDashboardViewModel(
+        medicines: HiveService.getActiveMedicines(),
+        logs90Days: HiveService.getRecentDoseLogs(days: 90),
+      );
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final medicines = _medicines;
-    final logs90Days = _logs90Days;
-    final overallPercent =
-        StatsCalculator.overallPercent(medicines, logs90Days);
 
     return Scaffold(
       backgroundColor:
@@ -64,7 +67,7 @@ class _StatsScreenState extends State<StatsScreen> with WidgetsBindingObserver {
         child: RefreshIndicator(
           onRefresh: () async {
             if (mounted) {
-              setState(() {});
+              _loadData();
             }
           },
           color: AppTheme.primaryColor,
@@ -72,8 +75,8 @@ class _StatsScreenState extends State<StatsScreen> with WidgetsBindingObserver {
             padding: const EdgeInsets.only(bottom: 28),
             children: [
               _buildHeaderCard(
-                medicines: medicines,
-                overallPercent: overallPercent,
+                medicines: _dashboard.medicines,
+                overallPercent: _dashboard.overallPercent,
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -83,9 +86,7 @@ class _StatsScreenState extends State<StatsScreen> with WidgetsBindingObserver {
                     const SizedBox(height: 16),
                     _buildSelectedView(
                       isDark: isDark,
-                      medicines: medicines,
-                      logs90Days: logs90Days,
-                      overallPercent: overallPercent,
+                      dashboard: _dashboard,
                     ),
                   ],
                 ),
@@ -228,7 +229,7 @@ class _StatsScreenState extends State<StatsScreen> with WidgetsBindingObserver {
         setState(() => _isGeneratingPdf = true);
         try {
           await PdfService.generateAndShareReport();
-        } catch (e) {
+        } on Object catch (e) {
           if (!mounted) {
             return;
           }
@@ -312,58 +313,29 @@ class _StatsScreenState extends State<StatsScreen> with WidgetsBindingObserver {
 
   Widget _buildSelectedView({
     required bool isDark,
-    required List<Medicine> medicines,
-    required List<DoseLog> logs90Days,
-    required int overallPercent,
+    required StatsDashboardViewModel dashboard,
   }) {
     return switch (_selectedView) {
       _StatsView.week => _buildWeeklyOverview(
           isDark: isDark,
-          medicines: medicines,
-          logs90Days: logs90Days,
-          overallPercent: overallPercent,
+          dashboard: dashboard,
         ),
       _StatsView.month => _buildMonthlyHeatmap(
           isDark: isDark,
-          medicines: medicines,
-          logs90Days: logs90Days,
+          dashboard: dashboard,
         ),
       _StatsView.quarter => _buildQuarterHeatmap(
           isDark: isDark,
-          medicines: medicines,
-          logs90Days: logs90Days,
+          dashboard: dashboard,
         ),
     };
   }
 
   Widget _buildWeeklyOverview({
     required bool isDark,
-    required List<Medicine> medicines,
-    required List<DoseLog> logs90Days,
-    required int overallPercent,
+    required StatsDashboardViewModel dashboard,
   }) {
-    final weekLogs = StatsCalculator.logsForDays(logs90Days, 7);
-    final hasData = weekLogs.isNotEmpty;
-    final weeklyData = StatsCalculator.calculateRealWeeklyData(weekLogs);
-    final previousWeekLogs =
-        StatsCalculator.logsInPastWindow(logs90Days, days: 7, offset: 7);
-    final daySummaries = StatsCalculator.dailySummaries(weekLogs, 7);
-    final adherenceRate = overallPercent;
-    final takenCount =
-        weekLogs.where((log) => log.status == DoseStatus.taken).length;
-    final missedCount =
-        weekLogs.where((log) => log.status == DoseStatus.missed).length;
-    final totalCount = weekLogs.length;
-    final streak = StatsCalculator.calculateStreak(logs90Days);
-    final previousMissedCount =
-        previousWeekLogs.where((log) => log.status == DoseStatus.missed).length;
-    final insight = StatsCalculator.buildInsight(
-      medicines: medicines,
-      logs: StatsCalculator.logsForDays(logs90Days, 30),
-      title: 'Gemini Tespiti',
-      summaryPrefix: 'düzenli kaçırıyorsun.',
-      improvementPrefix: 'Genel uyumun toparlanıyor.',
-    );
+    final weekly = dashboard.weekly;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -371,38 +343,35 @@ class _StatsScreenState extends State<StatsScreen> with WidgetsBindingObserver {
         _buildSectionTitle('Haftalık Genel Bakış', isDark),
         const SizedBox(height: 10),
         StatSummaryGrid(
-          adherenceRate: adherenceRate,
-          adherenceTrend: StatsCalculator.trendLabel(
-              adherenceRate - StatsCalculator.adherenceRate(previousWeekLogs)),
-          isAdherencePositive:
-              adherenceRate >= StatsCalculator.adherenceRate(previousWeekLogs),
-          streak: streak,
-          takenCount: takenCount,
-          totalCount: totalCount,
-          missedCount: missedCount,
-          missedTrend: StatsCalculator.missedTrendLabel(
-              missedCount, previousMissedCount),
-          isMissedPositive: missedCount <= previousMissedCount,
+          adherenceRate: weekly.adherenceRate,
+          adherenceTrend: weekly.adherenceTrend,
+          isAdherencePositive: weekly.isAdherencePositive,
+          streak: weekly.streak,
+          takenCount: weekly.takenCount,
+          totalCount: weekly.totalCount,
+          missedCount: weekly.missedCount,
+          missedTrend: weekly.missedTrend,
+          isMissedPositive: weekly.isMissedPositive,
           isDark: isDark,
         ),
         const SizedBox(height: 16),
         WeeklyBarChart(
-          weeklyData: weeklyData,
-          daySummaries: daySummaries,
-          hasData: hasData,
+          weeklyData: weekly.weeklyData,
+          daySummaries: weekly.daySummaries,
+          hasData: weekly.hasData,
           isDark: isDark,
         ),
         const SizedBox(height: 12),
         MedicineBreakdownCard(
-          medicines: medicines,
-          logs: weekLogs,
+          medicines: dashboard.medicines,
+          logs: weekly.logs,
           isDark: isDark,
           trailing: 'Son 7 gün',
         ),
         const SizedBox(height: 12),
-        if (medicines.isNotEmpty)
+        if (dashboard.medicines.isNotEmpty)
           _buildInsightCard(
-            insight: insight,
+            insight: weekly.insight,
             isDark: isDark,
           ),
       ],
@@ -411,11 +380,9 @@ class _StatsScreenState extends State<StatsScreen> with WidgetsBindingObserver {
 
   Widget _buildMonthlyHeatmap({
     required bool isDark,
-    required List<Medicine> medicines,
-    required List<DoseLog> logs90Days,
+    required StatsDashboardViewModel dashboard,
   }) {
-    final monthLogs = StatsCalculator.logsForDays(logs90Days, 35);
-    final heatmapData = StatsCalculator.heatmapData(monthLogs, 35);
+    final monthly = dashboard.monthly;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -423,17 +390,17 @@ class _StatsScreenState extends State<StatsScreen> with WidgetsBindingObserver {
         _buildSectionTitle('Aylık Isı Haritası', isDark),
         const SizedBox(height: 10),
         HeatmapCard(
-          data: heatmapData,
+          data: monthly.heatmapData,
           isDark: isDark,
           title: 'Uyum Isı Haritası',
           trailing: '35 gün',
           crossAxisCount: 7,
-          hasData: monthLogs.isNotEmpty,
+          hasData: monthly.logs.isNotEmpty,
         ),
         const SizedBox(height: 12),
         MedicineBreakdownCard(
-          medicines: medicines,
-          logs: monthLogs,
+          medicines: dashboard.medicines,
+          logs: monthly.logs,
           isDark: isDark,
           trailing: 'Son 35 gün',
         ),
@@ -443,23 +410,9 @@ class _StatsScreenState extends State<StatsScreen> with WidgetsBindingObserver {
 
   Widget _buildQuarterHeatmap({
     required bool isDark,
-    required List<Medicine> medicines,
-    required List<DoseLog> logs90Days,
+    required StatsDashboardViewModel dashboard,
   }) {
-    final heatmapData = StatsCalculator.heatmapData(logs90Days, 90);
-    final lastSeven = StatsCalculator.dailySummaries(
-        StatsCalculator.logsForDays(logs90Days, 7), 7);
-    final current30 = StatsCalculator.adherenceRate(
-        StatsCalculator.logsForDays(logs90Days, 30));
-    final previous30 = StatsCalculator.adherenceRate(
-        StatsCalculator.logsInPastWindow(logs90Days, days: 30, offset: 30));
-    final insight = StatsCalculator.buildInsight(
-      medicines: medicines,
-      logs: logs90Days,
-      title: '3 Aylık Özet',
-      summaryPrefix: 'hala zayıf noktan.',
-      improvementPrefix: 'Geçen aya göre daha istikrarlısın.',
-    );
+    final quarter = dashboard.quarter;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -467,12 +420,12 @@ class _StatsScreenState extends State<StatsScreen> with WidgetsBindingObserver {
         _buildSectionTitle('3 Aylık Isı Haritası', isDark),
         const SizedBox(height: 10),
         HeatmapCard(
-          data: heatmapData,
+          data: quarter.heatmapData,
           isDark: isDark,
           title: 'Uyum Isı Haritası',
           trailing: '90 gün',
           crossAxisCount: 7,
-          hasData: logs90Days.isNotEmpty,
+          hasData: dashboard.logs90Days.isNotEmpty,
         ),
         const SizedBox(height: 12),
         _buildCardShell(
@@ -482,14 +435,14 @@ class _StatsScreenState extends State<StatsScreen> with WidgetsBindingObserver {
             children: [
               _buildCardTitle(
                 title: 'Haftalık Seri',
-                trailing: current30 >= previous30
-                    ? '+${current30 - previous30}%'
-                    : '${current30 - previous30}%',
+                trailing: quarter.current30 >= quarter.previous30
+                    ? '+${quarter.current30 - quarter.previous30}%'
+                    : '${quarter.current30 - quarter.previous30}%',
                 isDark: isDark,
               ),
               const SizedBox(height: 12),
               Row(
-                children: lastSeven.map((day) {
+                children: quarter.lastSeven.map((day) {
                   final fullyTaken = day.total > 0 && day.taken == day.total;
                   final hasMissed = day.missed > 0;
                   final background = fullyTaken
@@ -544,9 +497,9 @@ class _StatsScreenState extends State<StatsScreen> with WidgetsBindingObserver {
           ),
         ),
         const SizedBox(height: 12),
-        if (medicines.isNotEmpty)
+        if (dashboard.medicines.isNotEmpty)
           _buildInsightCard(
-            insight: insight,
+            insight: quarter.insight,
             isDark: isDark,
           ),
       ],

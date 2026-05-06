@@ -8,15 +8,14 @@ import '../models/profile.dart';
 import '../services/hive_service.dart';
 import '../services/notification_service.dart';
 import '../services/widget_service.dart';
-import '../utils/stats_calculator.dart';
 import '../theme/app_theme.dart';
+import '../view_models/home_dashboard_view_model.dart';
 import 'add_medicine_screen.dart';
 import 'family_profiles_screen.dart';
 import 'medicine_detail_screen.dart';
 import 'notification_center_screen.dart';
 import '../widgets/home/calendar_strip.dart';
 import '../widgets/home/dose_card.dart';
-import '../widgets/home/home_day_summary.dart';
 import '../widgets/home/home_header.dart';
 import '../widgets/home/medicine_card.dart';
 import '../widgets/home/stock_warning_banner.dart';
@@ -29,12 +28,9 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
-  List<DoseLog> _selectedDayDoses = [];
-  List<Medicine> _activeMedicines = [];
-  List<Medicine> _lowStockMedicines = [];
-  List<DoseLog> _upcomingAgenda = [];
   DateTime _selectedDay = DateTime.now();
-  int _currentStreak = 0;
+  late HomeDashboardViewModel _dashboard =
+      HomeDashboardViewModel.empty(_selectedDay);
 
   @override
   void initState() {
@@ -63,71 +59,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
 
     setState(() {
-      _selectedDayDoses = HiveService.getDoseLogsForDate(_selectedDay);
-      _activeMedicines = HiveService.getActiveMedicines();
-      _lowStockMedicines = HiveService.getLowStockMedicines();
-      _upcomingAgenda =
-          HiveService.getPendingFutureDoseLogs(daysAhead: 60).take(18).toList();
-      final recentLogs = HiveService.getRecentDoseLogs(days: 90);
-      _currentStreak = StatsCalculator.calculateStreak(recentLogs);
+      _dashboard = HomeDashboardViewModel(
+        selectedDay: _selectedDay,
+        selectedDayDoses: HiveService.getDoseLogsForDate(_selectedDay),
+        activeMedicines: HiveService.getActiveMedicines(),
+        lowStockMedicines: HiveService.getLowStockMedicines(),
+        upcomingAgenda: HiveService.getPendingFutureDoseLogs(daysAhead: 60)
+            .take(18)
+            .toList(),
+        recentLogs: HiveService.getRecentDoseLogs(days: 90),
+      );
     });
-  }
-
-  bool get _isSelectedDayToday {
-    final now = DateTime.now();
-    return now.year == _selectedDay.year &&
-        now.month == _selectedDay.month &&
-        now.day == _selectedDay.day;
-  }
-
-  int get _takenCount =>
-      _selectedDayDoses.where((dose) => dose.status == DoseStatus.taken).length;
-
-  int get _pendingCount => _selectedDayDoses
-      .where(
-        (dose) =>
-            dose.status == DoseStatus.pending ||
-            dose.status == DoseStatus.snoozed,
-      )
-      .length;
-
-  int get _missedCount => _selectedDayDoses
-      .where((dose) => dose.status == DoseStatus.missed)
-      .length;
-
-  double get _completionRate =>
-      _selectedDayDoses.isEmpty ? 0 : _takenCount / _selectedDayDoses.length;
-
-  DoseLog? get _nextDose {
-    final doses = [..._selectedDayDoses]
-      ..sort((a, b) => a.scheduledTime.compareTo(b.scheduledTime));
-
-    if (_isSelectedDayToday) {
-      final now = DateTime.now();
-      for (final dose in doses) {
-        if (dose.scheduledTime.isAfter(now) &&
-            dose.status != DoseStatus.taken &&
-            dose.status != DoseStatus.missed) {
-          return dose;
-        }
-      }
-    }
-
-    for (final dose in doses) {
-      if (dose.status != DoseStatus.taken && dose.status != DoseStatus.missed) {
-        return dose;
-      }
-    }
-
-    return doses.isEmpty ? null : doses.first;
-  }
-
-  String get _nextDoseLabel {
-    final dose = _nextDose;
-    if (dose == null) {
-      return '--:--';
-    }
-    return DateFormat('HH:mm').format(dose.scheduledTime);
   }
 
   String _profileDisplayName(Profile profile) {
@@ -140,20 +82,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return initials.isEmpty
         ? 'B'
         : initials.substring(0, initials.length.clamp(1, 2));
-  }
-
-  String get _selectedDayTitle =>
-      _isSelectedDayToday ? 'Bugünkü İlaçlar' : 'Seçili Günün İlaçları';
-
-  HomeDaySummary get _daySummary {
-    return HomeDaySummary(
-      takenCount: _takenCount,
-      pendingCount: _pendingCount,
-      missedCount: _missedCount,
-      completionRate: _completionRate,
-      nextDose: _nextDose,
-      totalCount: _selectedDayDoses.length,
-    );
   }
 
   @override
@@ -175,14 +103,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             children: [
               HomeHeader(
                 activeProfile: HiveService.getActiveProfile(),
-                summary: _daySummary,
-                currentStreak: _currentStreak,
+                summary: _dashboard.daySummary,
+                currentStreak: _dashboard.currentStreak,
                 isDark: isDark,
-                isSelectedDayToday: _isSelectedDayToday,
-                nextMedicine: _nextDose == null ? null : HiveService.getMedicine(_nextDose!.medicineId),
+                isSelectedDayToday: _dashboard.isSelectedDayToday,
+                nextMedicine: _dashboard.nextMedicine,
                 onNotificationsTap: () async {
                   await Navigator.of(context).push(
-                    MaterialPageRoute(
+                    MaterialPageRoute<void>(
                       builder: (_) => const NotificationCenterScreen(),
                     ),
                   );
@@ -203,41 +131,43 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 },
               ),
               _buildOverviewMetrics(isDark),
-              StockWarningBanner(lowStockMedicines: _lowStockMedicines),
+              StockWarningBanner(
+                lowStockMedicines: _dashboard.lowStockMedicines,
+              ),
               _buildSectionTitle(
-                _selectedDayTitle,
+                _dashboard.selectedDayTitle,
                 icon: Icons.calendar_today_rounded,
                 isDark: isDark,
               ),
-              if (_selectedDayDoses.isEmpty)
+              if (_dashboard.selectedDayDoses.isEmpty)
                 _buildNoDosesMessage(isDark)
               else
-                for (final dose in _selectedDayDoses)
-                  if (HiveService.getMedicine(dose.medicineId) != null)
-                    DoseCard(
-                      dose: dose,
-                      medicine: HiveService.getMedicine(dose.medicineId)!,
-                      isDark: isDark,
-                      onTake: () => _markAsTaken(dose),
-                      onSnooze: () => _snoozeDose(dose),
-                    ),
+                for (final item in _dashboard.doseMedicinePairs)
+                  DoseCard(
+                    dose: item.dose,
+                    medicine: item.medicine,
+                    isDark: isDark,
+                    onTake: () => _markAsTaken(item.dose),
+                    onSnooze: () => _snoozeDose(item.dose),
+                  ),
               _buildSectionDivider(isDark),
               _buildSectionTitle(
                 'Tüm İlaçlarım',
                 icon: Icons.medication_rounded,
                 isDark: isDark,
               ),
-              if (_activeMedicines.isEmpty)
+              if (_dashboard.activeMedicines.isEmpty)
                 _buildEmptyState(isDark)
               else
-                for (final medicine in _activeMedicines)
+                for (final medicine in _dashboard.activeMedicines)
                   MedicineCard(
                     medicine: medicine,
                     isDark: isDark,
                     selectedDay: _selectedDay,
                     onTap: () => _navigateToDetail(medicine),
                   ),
-              if (_upcomingAgenda.isNotEmpty) _buildAgendaSection(isDark),
+              if (_dashboard.upcomingAgenda.isNotEmpty)
+                _buildAgendaSection(isDark),
               const SizedBox(height: 112),
             ],
           ),
@@ -247,15 +177,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildOverviewMetrics(bool isDark) {
-    final completionPercent = (_completionRate * 100).round();
-    final statusText = _selectedDayDoses.isEmpty
-        ? 'Plan yok'
-        : _missedCount > 0
-            ? '$_missedCount doz atlandı'
-            : completionPercent >= 100
-                ? 'Tamamlandı'
-                : '$completionPercent% tamam';
-
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       padding: const EdgeInsets.all(16),
@@ -309,7 +230,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       ),
                     ),
                     Text(
-                      statusText,
+                      _dashboard.statusText,
                       style: GoogleFonts.nunito(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
@@ -329,7 +250,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  'Sıradaki $_nextDoseLabel',
+                  'Sıradaki ${_dashboard.nextDoseLabel}',
                   style: GoogleFonts.nunito(
                     fontSize: 11,
                     fontWeight: FontWeight.w900,
@@ -343,7 +264,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ClipRRect(
             borderRadius: BorderRadius.circular(999),
             child: LinearProgressIndicator(
-              value: _completionRate.clamp(0, 1).toDouble(),
+              value: _dashboard.completionRate.clamp(0, 1).toDouble(),
               minHeight: 7,
               backgroundColor:
                   isDark ? AppTheme.darkSurface : AppTheme.backgroundSecondary,
@@ -357,7 +278,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 child: _buildOverviewStat(
                   icon: Icons.medication_rounded,
                   label: 'Doz',
-                  value: '${_selectedDayDoses.length}',
+                  value: '${_dashboard.selectedDayDoses.length}',
                   isDark: isDark,
                 ),
               ),
@@ -366,7 +287,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 child: _buildOverviewStat(
                   icon: Icons.check_circle_rounded,
                   label: 'Alındı',
-                  value: '$_takenCount',
+                  value: '${_dashboard.takenCount}',
                   color: AppTheme.takenColor,
                   isDark: isDark,
                 ),
@@ -376,7 +297,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 child: _buildOverviewStat(
                   icon: Icons.schedule_rounded,
                   label: 'Bekleyen',
-                  value: '$_pendingCount',
+                  value: '${_dashboard.pendingCount}',
                   color: AppTheme.pendingColor,
                   isDark: isDark,
                 ),
@@ -386,8 +307,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 child: _buildOverviewStat(
                   icon: Icons.inventory_2_rounded,
                   label: 'Stok',
-                  value: '${_lowStockMedicines.length}',
-                  color: _lowStockMedicines.isEmpty
+                  value: '${_dashboard.lowStockMedicines.length}',
+                  color: _dashboard.lowStockMedicines.isEmpty
                       ? AppTheme.takenColor
                       : AppTheme.warningColor,
                   isDark: isDark,
@@ -444,17 +365,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   // ignore: unused_element
   Widget _buildSummaryCard(bool isDark) {
-    final pending = _selectedDayDoses
-        .where(
-          (dose) =>
-              dose.status == DoseStatus.pending ||
-              dose.status == DoseStatus.snoozed,
-        )
-        .length;
-    final missed = _selectedDayDoses
-        .where((dose) => dose.status == DoseStatus.missed)
-        .length;
-
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
       padding: const EdgeInsets.all(16),
@@ -499,14 +409,29 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             children: [
               Expanded(
                 child: _buildSummaryMetric(
-                    'Toplam', '${_selectedDayDoses.length}'),
+                  'Toplam',
+                  '${_dashboard.selectedDayDoses.length}',
+                ),
               ),
               const SizedBox(width: 8),
-              Expanded(child: _buildSummaryMetric('Alındı', '$_takenCount')),
+              Expanded(
+                child:
+                    _buildSummaryMetric('Alındı', '${_dashboard.takenCount}'),
+              ),
               const SizedBox(width: 8),
-              Expanded(child: _buildSummaryMetric('Bekliyor', '$pending')),
+              Expanded(
+                child: _buildSummaryMetric(
+                  'Bekliyor',
+                  '${_dashboard.pendingCount}',
+                ),
+              ),
               const SizedBox(width: 8),
-              Expanded(child: _buildSummaryMetric('Atlandı', '$missed')),
+              Expanded(
+                child: _buildSummaryMetric(
+                  'Atlandı',
+                  '${_dashboard.missedCount}',
+                ),
+              ),
             ],
           ),
         ],
@@ -545,11 +470,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildAgendaSection(bool isDark) {
-    final grouped = <String, List<DoseLog>>{};
-    for (final dose in _upcomingAgenda) {
-      final key = DateFormat('yyyy-MM-dd').format(dose.scheduledTime);
-      grouped.putIfAbsent(key, () => []).add(dose);
-    }
+    final grouped = _dashboard.agendaGroups;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
@@ -943,7 +864,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return GestureDetector(
       onTap: () async {
         final result = await Navigator.of(context).push(
-          MaterialPageRoute(
+          MaterialPageRoute<Object?>(
             builder: (_) => const AddMedicineScreen(),
           ),
         );
@@ -1039,7 +960,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _navigateToDetail(Medicine medicine) async {
     await Navigator.push(
       context,
-      MaterialPageRoute(
+      MaterialPageRoute<void>(
         builder: (_) => MedicineDetailScreen(medicine: medicine),
       ),
     );
@@ -1158,7 +1079,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     Navigator.of(sheetContext).pop();
                     await Navigator.push(
                       context,
-                      MaterialPageRoute(
+                      MaterialPageRoute<void>(
                         builder: (_) => const FamilyProfilesScreen(),
                       ),
                     );
