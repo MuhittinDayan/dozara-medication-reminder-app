@@ -9,6 +9,7 @@
 [![Supabase](https://img.shields.io/badge/Supabase-Backend-3ECF8E?logo=supabase)](https://supabase.com)
 [![Firebase](https://img.shields.io/badge/Firebase-FCM-FFCA28?logo=firebase)](https://firebase.google.com)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![GitHub](https://img.shields.io/badge/GitHub-MuhittinDayan-181717?logo=github)](https://github.com/MuhittinDayan/dozara-medication-reminder-app)
 [![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20iOS-lightgrey)](https://flutter.dev)
 
 </div>
@@ -140,8 +141,8 @@ lib/
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/dozara.git
-   cd dozara
+   git clone https://github.com/MuhittinDayan/dozara-medication-reminder-app.git
+   cd dozara-medication-reminder-app
    ```
 
 2. **Install dependencies**
@@ -226,7 +227,7 @@ flutter analyze
 ## 🤝 Contributing
 
 Contributions, issues, and feature requests are welcome!  
-Feel free to open an [issue](https://github.com/YOUR_USERNAME/dozara/issues) or submit a pull request.
+Feel free to open an [issue](https://github.com/MuhittinDayan/dozara-medication-reminder-app/issues) or submit a pull request.
 
 ---
 
