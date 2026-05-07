@@ -12,6 +12,24 @@ Flutter ile geliştirilmiş, yapay zeka destekli ilaç takip ve hatırlatıcı u
 
 Dozara, ilaç programlarını, doz geçmişini, aile profillerini ve hatırlatıcıları tek yerde yönetmek için tasarlanmış modern bir Flutter uygulamasıdır. Uygulama yerel veri saklama, opsiyonel Supabase yedekleme, Firebase bildirimleri, Gemini destekli AI asistan, OCR ile ilaç tarama ve PDF raporlama özelliklerini bir araya getirir.
 
+## Uygulama Görselleri
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/MuhittinDayan/dozara-medication-reminder-app/readme-assets/screenshots/photo_6046508440701570792_y.jpg" alt="Dozara uygulama ikonu" width="170">
+  <img src="https://raw.githubusercontent.com/MuhittinDayan/dozara-medication-reminder-app/readme-assets/screenshots/photo_6046508440701570791_y.jpg" alt="Dozara açılış ekranı" width="170">
+  <img src="https://raw.githubusercontent.com/MuhittinDayan/dozara-medication-reminder-app/readme-assets/screenshots/photo_6046508440701570790_y.jpg" alt="Dozara tanıtım ekranı" width="170">
+  <img src="https://raw.githubusercontent.com/MuhittinDayan/dozara-medication-reminder-app/readme-assets/screenshots/photo_6046508440701570788_y.jpg" alt="Profil oluşturma ekranı" width="170">
+  <img src="https://raw.githubusercontent.com/MuhittinDayan/dozara-medication-reminder-app/readme-assets/screenshots/photo_6046508440701570789_y.jpg" alt="İzinler ekranı" width="170">
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/MuhittinDayan/dozara-medication-reminder-app/readme-assets/screenshots/photo_6046508440701570787_y.jpg" alt="Onboarding tamamlandı ekranı" width="170">
+  <img src="https://raw.githubusercontent.com/MuhittinDayan/dozara-medication-reminder-app/readme-assets/screenshots/photo_6046508440701570785_y.jpg" alt="Ana sayfa" width="170">
+  <img src="https://raw.githubusercontent.com/MuhittinDayan/dozara-medication-reminder-app/readme-assets/screenshots/photo_6046508440701570783_y.jpg" alt="Profil seçimi" width="170">
+  <img src="https://raw.githubusercontent.com/MuhittinDayan/dozara-medication-reminder-app/readme-assets/screenshots/photo_6046508440701570784_y.jpg" alt="İlaç ekleme ekranı" width="170">
+  <img src="https://raw.githubusercontent.com/MuhittinDayan/dozara-medication-reminder-app/readme-assets/screenshots/photo_6046508440701570786_y.jpg" alt="İstatistik ekranı" width="170">
+</p>
+
 ## Öne Çıkan Özellikler
 
 - İlaç, doz, form, tekrar sıklığı, kullanım notu ve tedavi süresi tanımlama
