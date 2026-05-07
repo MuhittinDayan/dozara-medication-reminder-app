@@ -1,6 +1,7 @@
 <div align="center">
 
 # 💊 Dozara — Medication Reminder App
+### 🇹🇷 Flutter ile geliştirilmiş, yapay zeka destekli çok platformlu ilaç takip uygulaması
 
 **A smart, secure, and AI-powered cross-platform medication tracking application built with Flutter.**
 
@@ -11,6 +12,19 @@
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![GitHub](https://img.shields.io/badge/GitHub-MuhittinDayan-181717?logo=github)](https://github.com/MuhittinDayan/dozara-medication-reminder-app)
 [![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20iOS-lightgrey)](https://flutter.dev)
+
+</div>
+
+---
+
+## 📱 Screenshots
+
+<div align="center">
+
+| Home | AI Assistant | Statistics |
+|------|-------------|------------|
+| ![Home Screen](docs/screenshots/home.png) | ![AI Assistant](docs/screenshots/ai_assistant.png) | ![Statistics](docs/screenshots/statistics.png) |
+| Daily dose checklist | Gemini-powered chat & OCR | 30-day adherence charts |
 
 </div>
 
