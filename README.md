@@ -21,10 +21,10 @@
 
 <div align="center">
 
-| Home | AI Assistant | Statistics |
+| Home | Add Medicine (AI Scan) | Statistics |
 |------|-------------|------------|
-| ![Home Screen](docs/screenshots/home.png) | ![AI Assistant](docs/screenshots/ai_assistant.png) | ![Statistics](docs/screenshots/statistics.png) |
-| Daily dose checklist | Gemini-powered chat & OCR | 30-day adherence charts |
+| ![Home Screen](docs/screenshots/home.png) | ![Add Medicine](docs/screenshots/add_medicine.png) | ![Statistics](docs/screenshots/statistics.png) |
+| Daily dose checklist | Add medicine & AI OCR | 30-day adherence charts |
 
 </div>
 
