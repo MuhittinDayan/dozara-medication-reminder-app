@@ -1,258 +1,161 @@
-<div align="center">
+# Dozara
 
-# 💊 Dozara — Medication Reminder App
-### 🇹🇷 Flutter ile geliştirilmiş, yapay zeka destekli çok platformlu ilaç takip uygulaması
+Flutter ile geliştirilmiş, yapay zeka destekli ilaç takip ve hatırlatıcı uygulaması.
 
-**A smart, secure, and AI-powered cross-platform medication tracking application built with Flutter.**
+<p align="center">
+  <a href="https://flutter.dev"><img alt="Flutter" src="https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter&logoColor=white"></a>
+  <a href="https://dart.dev"><img alt="Dart" src="https://img.shields.io/badge/Dart-3.x-0175C2?logo=dart&logoColor=white"></a>
+  <a href="https://supabase.com"><img alt="Supabase" src="https://img.shields.io/badge/Supabase-Backend-3ECF8E?logo=supabase&logoColor=white"></a>
+  <a href="https://firebase.google.com"><img alt="Firebase" src="https://img.shields.io/badge/Firebase-FCM-FFCA28?logo=firebase&logoColor=black"></a>
+  <img alt="Platform" src="https://img.shields.io/badge/Platform-Android%20%7C%20iOS%20%7C%20Web-lightgrey">
+</p>
 
-[![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter)](https://flutter.dev)
-[![Dart](https://img.shields.io/badge/Dart-3.x-0175C2?logo=dart)](https://dart.dev)
-[![Supabase](https://img.shields.io/badge/Supabase-Backend-3ECF8E?logo=supabase)](https://supabase.com)
-[![Firebase](https://img.shields.io/badge/Firebase-FCM-FFCA28?logo=firebase)](https://firebase.google.com)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![GitHub](https://img.shields.io/badge/GitHub-MuhittinDayan-181717?logo=github)](https://github.com/MuhittinDayan/dozara-medication-reminder-app)
-[![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20iOS-lightgrey)](https://flutter.dev)
+Dozara, ilaç programlarını, doz geçmişini, aile profillerini ve hatırlatıcıları tek yerde yönetmek için tasarlanmış modern bir Flutter uygulamasıdır. Uygulama yerel veri saklama, opsiyonel Supabase yedekleme, Firebase bildirimleri, Gemini destekli AI asistan, OCR ile ilaç tarama ve PDF raporlama özelliklerini bir araya getirir.
 
-</div>
+## Öne Çıkan Özellikler
 
----
+- İlaç, doz, form, tekrar sıklığı, kullanım notu ve tedavi süresi tanımlama
+- Günlük, haftalık ve özel aralıklı hatırlatıcı planları
+- Yerel bildirimler, Firebase Cloud Messaging ve aile bildirim altyapısı
+- Stok takibi, düşük stok uyarıları ve doz geçmişi
+- Gemini destekli AI asistan ve OCR tabanlı reçete/ilaç kutusu tarama
+- Çoklu profil desteği ile aile üyelerinin ilaç planlarını ayrı yönetme
+- Haftalık, aylık ve 3 aylık uyum istatistikleri
+- PDF rapor üretimi ve paylaşım desteği
+- Hive tabanlı yerel veri saklama ve `flutter_secure_storage` ile güvenli anahtar yönetimi
+- Karanlık/aydınlık tema, Türkçe yerelleştirme ve ana ekran widget desteği
 
-## 📱 Screenshots
+## Teknoloji Yığını
 
-<div align="center">
+| Katman | Teknoloji |
+| --- | --- |
+| Uygulama | Flutter, Dart |
+| Durum yönetimi | flutter_bloc / Cubit |
+| Yerel veri | Hive, Hive Flutter |
+| Güvenli depolama | flutter_secure_storage, crypto |
+| Backend ve yedekleme | Supabase Auth, PostgreSQL, Edge Functions |
+| AI ve OCR | Gemini API, Google ML Kit Text Recognition |
+| Bildirimler | flutter_local_notifications, Firebase Messaging |
+| Raporlama | pdf, printing, share_plus |
+| Grafikler | fl_chart |
+| Ses | speech_to_text, flutter_tts |
+| Widget | home_widget |
+| CI/CD | Codemagic |
 
-| Home | Add Medicine (AI Scan) | Statistics |
-|------|-------------|------------|
-| ![Home Screen](docs/screenshots/home.png) | ![Add Medicine](docs/screenshots/add_medicine.png) | ![Statistics](docs/screenshots/statistics.png) |
-| Daily dose checklist | Add medicine & AI OCR | 30-day adherence charts |
+## Proje Yapısı
 
-</div>
-
----
-
-## 📖 Overview
-
-**Dozara** is a full-featured medication management app designed to help users and their families maintain consistent medication schedules. It combines intelligent reminders, AI-assisted medicine scanning, biometric security, and detailed adherence analytics — all working seamlessly offline with optional cloud sync.
-
-> Built as a personal project to demonstrate real-world Flutter development skills: state management, local persistence, cloud integration, AI/ML, and secure data handling.
-
----
-
-## ✨ Features
-
-### 💊 Medication Management
-- Add medications with name, dosage, form (pill, syrup, injection, drop, cream, inhaler)
-- Flexible scheduling: **daily**, **specific weekdays**, or **custom intervals**
-- Multiple custom reminder times per medication
-- "Take with food" flag and personal notes
-- Treatment duration tracking with automatic expiry detection
-
-### 🔔 Smart Notifications
-- Local push notifications via `flutter_local_notifications`
-- Firebase Cloud Messaging (FCM) for remote/family notifications
-- Notification center with full history log
-- Home screen widget for at-a-glance daily doses
-
-### 📦 Stock Tracking
-- Real-time stock count tracking
-- Configurable low-stock warnings
-- Empty-stock alerts to prompt refills
-
-### 📊 Adherence Analytics
-- **30-day adherence statistics** with visual charts (`fl_chart`)
-- Dose history log per medication
-- Completion rate tracking across all active medicines
-
-### 🤖 AI Assistant
-- Conversational AI assistant powered by **Gemini API** (via Supabase Edge Functions)
-- **OCR-based medicine scanning** using **Google ML Kit** — scan a medicine box to auto-fill details
-- **Speech-to-Text** and **Text-to-Speech** support for hands-free interaction
-
-### 👨‍👩‍👧 Multi-Profile Support
-- Manage medication schedules for the whole family
-- Separate profiles with independent medication lists and notification streams
-- Family notification service for caregiver alerts
-
-### 📄 PDF Reports
-- Generate detailed medication adherence reports
-- Export and share reports with healthcare providers
-
-### 🔒 Security & Privacy
-- App-level **PIN protection** and **biometric authentication** (fingerprint/face)
-- All data encrypted locally with **Hive AES encryption**
-- Encryption keys stored securely via `flutter_secure_storage`
-- No personal health data leaves the device without user consent
-
----
-
-## 🏗️ Architecture
-
-```
+```text
 lib/
-├── cubit/              # BLoC/Cubit state management
-├── models/             # Hive data models (Medicine, Profile, DoseLog)
-├── screens/            # 11 full-featured app screens
-│   ├── home_screen.dart
-│   ├── add_medicine_screen.dart
-│   ├── medicine_detail_screen.dart
-│   ├── ai_assistant_screen.dart
-│   ├── stats_screen.dart
-│   ├── history_screen.dart
-│   ├── family_profiles_screen.dart
-│   ├── notification_center_screen.dart
-│   ├── settings_screen.dart
-│   └── onboarding_screen.dart
-├── services/           # Business logic layer
-│   ├── ai_service.dart           # Gemini API integration
-│   ├── hive_service.dart         # Local database operations
-│   ├── notification_service.dart # Local notification scheduling
-│   ├── ocr_service.dart          # Google ML Kit OCR
-│   ├── pdf_service.dart          # Report generation
-│   ├── voice_reminder_service.dart # TTS reminders
-│   └── widget_service.dart       # Home screen widget
-├── theme/              # Design system & theming
-├── utils/              # Helper utilities
-└── widgets/            # Reusable UI components
+  cubit/                  # Profil ve uygulama durumu
+  data/
+    backend/              # Supabase/Firebase bağlantı katmanı
+    remote/               # Supabase veri kaynağı ve mapper'lar
+    repositories/         # Profile, medicine ve dose repository'leri
+    sync/                 # Yerel/uzak veri senkronizasyonu
+  models/                 # Hive modelleri
+  screens/                # Ana ekranlar
+  services/               # AI, OCR, bildirim, PDF, widget ve veri servisleri
+  theme/                  # Uygulama teması
+  utils/                  # Yardımcı hesaplama ve form aracı sınıfları
+  widgets/                # Yeniden kullanılabilir UI bileşenleri
+
+supabase/
+  migrations/             # Veritabanı şeması ve AI kota tabloları
+  functions/gemini-proxy/ # Gemini proxy Edge Function
 ```
 
-**State Management:** BLoC / Cubit pattern  
-**Data Flow:** Unidirectional, event-driven architecture
+## Kurulum
 
----
-
-## 🛠️ Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| **Framework** | Flutter 3.x / Dart 3.x |
-| **State Management** | flutter_bloc (BLoC / Cubit) |
-| **Local Database** | Hive + Hive Flutter (AES encrypted) |
-| **Backend** | Supabase (Auth + Edge Functions) |
-| **AI / ML** | Gemini API, Google ML Kit (OCR) |
-| **Push Notifications** | flutter_local_notifications + Firebase FCM |
-| **Security** | flutter_secure_storage, local_auth (biometrics) |
-| **Charts** | fl_chart |
-| **PDF** | pdf + printing |
-| **Voice** | speech_to_text + flutter_tts |
-| **Home Widget** | home_widget |
-| **Animations** | flutter_animate + Lottie |
-| **Fonts** | Google Fonts |
-| **CI/CD** | Codemagic |
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
+### Gereksinimler
 
 - Flutter SDK `>=3.0.0 <4.0.0`
 - Dart SDK `>=3.0.0`
-- Android Studio / Xcode (for device deployment)
-- A [Supabase](https://supabase.com) project
-- A [Firebase](https://console.firebase.google.com) project (for FCM)
+- Android Studio veya Xcode
+- Opsiyonel: Supabase CLI
+- Opsiyonel: Firebase projesi ve platform konfigürasyon dosyaları
 
-### Installation
+### Adımlar
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/MuhittinDayan/dozara-medication-reminder-app.git
-   cd dozara-medication-reminder-app
-   ```
+```bash
+git clone https://github.com/MuhittinDayan/MediTrack.git
+cd MediTrack
+flutter pub get
+```
 
-2. **Install dependencies**
-   ```bash
-   flutter pub get
-   ```
+Proje kök dizininde `.env` dosyası oluşturun:
 
-3. **Configure environment variables**
+```env
+SUPABASE_URL=https://your-project-ref.supabase.co
+SUPABASE_ANON_KEY=your_supabase_anon_key
+```
 
-   Create a `.env` file in the project root:
-   ```env
-   SUPABASE_URL=https://your-project-ref.supabase.co
-   SUPABASE_ANON_KEY=your_supabase_anon_key
-   ```
+Uygulamayı çalıştırın:
 
-   > ⚠️ The Gemini API key is **not** stored in the app. It lives as a Supabase secret and is accessed exclusively through `supabase/functions/gemini-proxy` for security.
+```bash
+flutter run
+```
 
-4. **Deploy Supabase Edge Functions** *(optional — required for AI features)*
-   ```bash
-   supabase functions deploy gemini-proxy
-   ```
+## Supabase ve AI Kurulumu
 
-5. **Run the app**
-   ```bash
-   flutter run
-   ```
+AI asistan ve ilaç tarama özellikleri Gemini API anahtarını istemciye koymadan `supabase/functions/gemini-proxy` üzerinden çalışır.
 
-### Build
+```bash
+supabase login
+supabase link --project-ref your-project-ref
+supabase db push
+supabase secrets set GEMINI_API_KEY=your_gemini_api_key
+supabase functions deploy gemini-proxy
+```
+
+Edge Function, Supabase oturumunu doğrular ve günlük AI kullanım limitlerini veritabanındaki kota fonksiyonu ile kontrol eder.
+
+## Build
 
 ```bash
 # Android APK
 flutter build apk --release
 
-# Android App Bundle (Play Store)
+# Android App Bundle
 flutter build appbundle --release
 
 # iOS
 flutter build ios --release
+
+# Web
+flutter build web --release
 ```
 
----
-
-## 🧪 Testing
+## Test ve Kalite
 
 ```bash
-# Run all tests
-flutter test
-
-# Static analysis
 flutter analyze
+flutter test
 ```
 
----
+Projede servis, model, dashboard, profil ve widget davranışları için Flutter testleri bulunur.
 
-## 🔐 Security Notes
+## Güvenlik Notları
 
-- All medication data is stored **on-device only**, encrypted with AES via Hive.
-- The AES encryption key and PIN hash are stored in the OS secure keychain via `flutter_secure_storage`.
-- Biometric authentication and PIN lock can be enabled optionally by the user.
-- Cloud sync (Supabase) is opt-in and uses row-level security (RLS) policies.
-- The Gemini API is called through a Supabase proxy — the API key is never exposed to the client.
+- İlaç verileri cihazda Hive ile saklanır.
+- Hassas anahtarlar `flutter_secure_storage` üzerinden yönetilir.
+- Supabase yedekleme opsiyoneldir ve kullanıcı oturumu gerektirir.
+- Gemini API anahtarı mobil uygulama içine gömülmez; istekler Edge Function proxy'si üzerinden geçer.
+- Firebase Messaging aile bildirimi ve uzaktan bildirim akışları için kullanılır.
 
----
+## Geliştirme Notları
 
-## 📱 Screens
+- `.env` dosyası repoya eklenmemelidir.
+- Android için Firebase kullanılıyorsa `android/app/google-services.json` dosyasının proje ortamına uygun olduğundan emin olun.
+- iOS için Firebase kullanılıyorsa `ios/Runner/GoogleService-Info.plist` dosyası ilgili Firebase uygulaması ile eşleşmelidir.
+- Ana ekran widget kurulumu için `docs/IOS_WIDGET_SETUP.md` dosyasındaki platform notlarını kontrol edin.
 
-| Screen | Description |
-|--------|-------------|
-| **Onboarding** | First-launch walkthrough with profile setup |
-| **Home** | Daily medication checklist with progress indicator |
-| **Add Medicine** | Rich form with schedule builder and dose calculator |
-| **Medicine Detail** | Full medication info, stock management, dose history |
-| **AI Assistant** | Chat, OCR scan, and voice interaction with Gemini |
-| **Statistics** | 30-day adherence charts and compliance tracking |
-| **History** | Chronological dose log with filtering |
-| **Family Profiles** | Multi-user profile management |
-| **Notification Center** | Full notification history and management |
-| **Settings** | Security, theme, language, and account settings |
+## Yol Haritasi
+
+- Yakındaki eczane ve konum tabanlı yardım akışları
+- Daha gelişmiş aile paylaşımı ve rol izinleri
+- Sağlık verisi entegrasyonları
+- Uyum raporlarında daha ayrıntılı trend analizi
 
 ---
 
-## 🤝 Contributing
-
-Contributions, issues, and feature requests are welcome!  
-Feel free to open an [issue](https://github.com/MuhittinDayan/dozara-medication-reminder-app/issues) or submit a pull request.
-
----
-
-## 📄 License
-
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
-
----
-
-<div align="center">
-
-Made with ❤️ using Flutter
-
-</div>
+Dozara, ilaç takibini daha anlaşılır, güvenli ve takip edilebilir hale getirmek için geliştirilmektedir.
